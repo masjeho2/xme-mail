@@ -1,0 +1,23 @@
+services:
+  xme-mail:
+    build: .
+    container_name: xme-mail
+    restart: unless-stopped
+    ports:
+      - "3110:3110"
+    env_file:
+      - .env
+    environment:
+      - DATABASE_URL=file:/app/data/xme.db
+      - PORT=3110
+    volumes:
+      - xme_data:/app/data
+    mem_limit: 1g
+    logging:
+      driver: json-file
+      options:
+        max-size: "20m"
+        max-file: "3"
+
+volumes:
+  xme_data:

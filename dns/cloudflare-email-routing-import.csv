@@ -1,0 +1,6 @@
+Name,Type,Content,TTL,Priority,Proxied
+@,MX,route1.mx.cloudflare.net,3600,13,false
+@,MX,route2.mx.cloudflare.net,3600,28,false
+@,MX,route3.mx.cloudflare.net,3600,47,false
+@,TXT,"v=spf1 include:_spf.mx.cloudflare.net ~all",3600,,false
+_dmarc,TXT,"v=DMARC1; p=none; rua=mailto:admin@x-me.cloud",3600,,false

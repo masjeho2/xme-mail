@@ -1,0 +1,27 @@
+[Unit]
+Description=xme-mail email panel (Next.js)
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=simple
+User=root
+WorkingDirectory=/root/xme-mail
+Environment=NODE_ENV=production
+Environment=PORT=3110
+Environment=PATH=/root/.nvm/versions/node/v24.16.0/bin:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin
+EnvironmentFile=-/root/xme-mail/.env
+ExecStartPre=/bin/bash -lc 'cd /root/xme-mail && /root/.nvm/versions/node/v24.16.0/bin/npx prisma generate && /root/.nvm/versions/node/v24.16.0/bin/npx prisma migrate deploy'
+ExecStart=/bin/bash -lc 'cd /root/xme-mail && /root/.nvm/versions/node/v24.16.0/bin/npm run start'
+Restart=always
+RestartSec=5
+TimeoutStartSec=120
+KillSignal=SIGINT
+SyslogIdentifier=xme-mail
+
+# Hardening (light)
+NoNewPrivileges=true
+PrivateTmp=true
+
+[Install]
+WantedBy=multi-user.target

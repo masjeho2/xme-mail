@@ -1,0 +1,87 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "sqlite"
+  url      = env("DATABASE_URL")
+}
+
+model User {
+  id           String   @id @default(cuid())
+  email        String   @unique
+  name         String?
+  passwordHash String
+  role         String   @default("admin")
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+  apiKeys      ApiKey[]
+}
+
+model Domain {
+  id        String   @id @default(cuid())
+  name      String   @unique
+  active    Boolean  @default(true)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  aliases   Alias[]
+  messages  Message[]
+}
+
+model Alias {
+  id            String   @id @default(cuid())
+  localPart     String
+  domainId      String
+  domain        Domain   @relation(fields: [domainId], references: [id], onDelete: Cascade)
+  forwardTo     String?
+  isCatchAll    Boolean  @default(false)
+  canSend       Boolean  @default(true)
+  active        Boolean  @default(true)
+  cfRuleId      String?
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+
+  @@unique([localPart, domainId])
+  @@index([domainId])
+  @@index([cfRuleId])
+}
+
+model ApiKey {
+  id         String    @id @default(cuid())
+  name       String
+  keyPrefix  String
+  keyHash    String    @unique
+  scopes     String    @default("send")
+  active     Boolean   @default(true)
+  lastUsedAt DateTime?
+  userId     String?
+  user       User?     @relation(fields: [userId], references: [id], onDelete: SetNull)
+  createdAt  DateTime  @default(now())
+  updatedAt  DateTime  @updatedAt
+
+  @@index([keyPrefix])
+}
+
+model Message {
+  id           String   @id @default(cuid())
+  direction    String // inbound | outbound
+  status       String   @default("received") // received | sent | failed | queued
+  isRead       Boolean  @default(false)
+  fromAddr     String
+  toAddr       String
+  subject      String   @default("")
+  textBody     String?
+  htmlBody     String?
+  providerId   String?
+  error        String?
+  headersJson  String?
+  rawMetaJson  String?
+  domainId     String?
+  domain       Domain?  @relation(fields: [domainId], references: [id], onDelete: SetNull)
+  createdAt    DateTime @default(now())
+
+  @@index([direction, createdAt])
+  @@index([direction, isRead])
+  @@index([toAddr])
+  @@index([fromAddr])
+}

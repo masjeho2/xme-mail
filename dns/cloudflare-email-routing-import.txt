@@ -1,0 +1,27 @@
+; Cloudflare DNS Import (BIND)
+; Domain: x-me.cloud
+; Purpose: Cloudflare Email Routing (inbound)
+;
+; Cara pakai:
+; 1. Cloudflare Dashboard → x-me.cloud → DNS → Records
+; 2. Klik Import
+; 3. Upload file ini ATAU paste isinya
+; 4. Review → Import
+;
+; Catatan:
+; - Jangan hapus record Resend di send.x-me.cloud
+; - Jangan hapus Tunnel mail.x-me.cloud
+; - Kalau Cloudflare Email Routing sudah auto-add MX, skip import ini
+
+; === Email Routing MX (wajib untuk terima email) ===
+x-me.cloud.	3600	IN	MX	13	route1.mx.cloudflare.net.
+x-me.cloud.	3600	IN	MX	28	route2.mx.cloudflare.net.
+x-me.cloud.	3600	IN	MX	47	route3.mx.cloudflare.net.
+
+; === SPF untuk Email Routing (terima).
+; Kalau nanti kirim juga dari root domain via Resend, gabung SPF manual.
+; Untuk sekarang Resend kamu di subdomain send.x-me.cloud → aman.
+x-me.cloud.	3600	IN	TXT	"v=spf1 include:_spf.mx.cloudflare.net ~all"
+
+; === DMARC (opsional, recommended) ===
+_dmarc.x-me.cloud.	3600	IN	TXT	"v=DMARC1; p=none; rua=mailto:admin@x-me.cloud"

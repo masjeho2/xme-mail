@@ -1,0 +1,696 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+:root {
+  --bg: #060a11;
+  --panel: #0c1320;
+  --panel-2: #101a2b;
+  --panel-hover: #152036;
+  --border: #1c2a40;
+  --border-soft: rgba(148, 163, 184, 0.12);
+  --text: #e8eefc;
+  --muted: #8b9bb4;
+  --accent: #5b9dff;
+  --accent-soft: rgba(59, 130, 246, 0.14);
+  --success: #34d399;
+  --danger: #f87171;
+  --warn: #fbbf24;
+  --shadow: 0 18px 50px rgba(0, 0, 0, 0.35);
+  --radius: 16px;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+html,
+body {
+  margin: 0;
+  min-height: 100%;
+  background:
+    radial-gradient(1100px 520px at 8% -8%, rgba(37, 99, 235, 0.18), transparent 55%),
+    radial-gradient(900px 480px at 100% 0%, rgba(14, 116, 144, 0.12), transparent 50%),
+    var(--bg);
+  color: var(--text);
+  font-family: ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+  -webkit-font-smoothing: antialiased;
+}
+
+a {
+  color: inherit;
+  text-decoration: none;
+}
+
+input,
+select,
+textarea,
+button {
+  font: inherit;
+}
+
+::selection {
+  background: rgba(59, 130, 246, 0.35);
+}
+
+.shell {
+  min-height: 100vh;
+  padding: 1rem;
+}
+
+@media (min-width: 768px) {
+  .shell {
+    padding: 1.25rem 1.5rem;
+  }
+}
+
+.app-frame {
+  max-width: 1280px;
+  margin: 0 auto;
+  display: grid;
+  gap: 1rem;
+}
+
+@media (min-width: 768px) {
+  .app-frame {
+    grid-template-columns: 250px 1fr;
+    gap: 1.25rem;
+    align-items: start;
+  }
+}
+
+.card {
+  background: linear-gradient(180deg, rgba(16, 24, 40, 0.96) 0%, rgba(12, 19, 32, 0.98) 100%);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  box-shadow: var(--shadow);
+  backdrop-filter: blur(8px);
+}
+
+.card-soft {
+  background: rgba(12, 19, 32, 0.72);
+  border: 1px solid var(--border-soft);
+  border-radius: 14px;
+}
+
+.page-title {
+  font-size: 1.5rem;
+  font-weight: 650;
+  letter-spacing: -0.02em;
+}
+
+.page-sub {
+  color: var(--muted);
+  font-size: 0.9rem;
+  margin-top: 0.25rem;
+}
+
+.btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.45rem;
+  border-radius: 11px;
+  border: 1px solid transparent;
+  padding: 0.6rem 1rem;
+  font-weight: 600;
+  font-size: 0.92rem;
+  cursor: pointer;
+  transition: 0.15s ease;
+  white-space: nowrap;
+}
+
+.btn:disabled {
+  opacity: 0.55;
+  cursor: not-allowed;
+}
+
+.btn-primary {
+  background: linear-gradient(180deg, #6aa8ff 0%, #3b82f6 100%);
+  color: white;
+  box-shadow: 0 8px 20px rgba(59, 130, 246, 0.25);
+}
+
+.btn-primary:hover:not(:disabled) {
+  filter: brightness(1.06);
+  transform: translateY(-1px);
+}
+
+.btn-ghost {
+  background: transparent;
+  border-color: var(--border);
+  color: var(--text);
+}
+
+.btn-ghost:hover:not(:disabled) {
+  background: rgba(255, 255, 255, 0.04);
+  border-color: #2b3d59;
+}
+
+.btn-danger {
+  background: rgba(248, 113, 113, 0.1);
+  border-color: rgba(248, 113, 113, 0.28);
+  color: #fecaca;
+}
+
+.btn-danger:hover:not(:disabled) {
+  background: rgba(248, 113, 113, 0.16);
+}
+
+.btn-sm {
+  padding: 0.4rem 0.7rem;
+  font-size: 0.82rem;
+  border-radius: 9px;
+}
+
+.field {
+  width: 100%;
+  background: #0a101a;
+  border: 1px solid var(--border);
+  border-radius: 11px;
+  color: var(--text);
+  padding: 0.7rem 0.85rem;
+  outline: none;
+  transition: 0.15s ease;
+}
+
+.field:hover {
+  border-color: #2a3d5c;
+}
+
+.field:focus {
+  border-color: #3b82f6;
+  box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.16);
+}
+
+textarea.field {
+  resize: vertical;
+  min-height: 120px;
+  line-height: 1.5;
+}
+
+.label {
+  display: block;
+  font-size: 0.78rem;
+  color: var(--muted);
+  margin-bottom: 0.4rem;
+  font-weight: 600;
+  letter-spacing: 0.02em;
+}
+
+.badge {
+  display: inline-flex;
+  align-items: center;
+  border-radius: 999px;
+  padding: 0.18rem 0.58rem;
+  font-size: 0.72rem;
+  font-weight: 650;
+  border: 1px solid var(--border);
+  color: var(--muted);
+  letter-spacing: 0.01em;
+}
+
+.badge-green {
+  color: #86efac;
+  border-color: rgba(34, 197, 94, 0.3);
+  background: rgba(34, 197, 94, 0.1);
+}
+
+.badge-blue {
+  color: #93c5fd;
+  border-color: rgba(59, 130, 246, 0.3);
+  background: rgba(59, 130, 246, 0.1);
+}
+
+.badge-red {
+  color: #fecaca;
+  border-color: rgba(248, 113, 113, 0.3);
+  background: rgba(248, 113, 113, 0.1);
+}
+
+.badge-yellow {
+  color: #fde68a;
+  border-color: rgba(251, 191, 36, 0.3);
+  background: rgba(251, 191, 36, 0.1);
+}
+
+.table {
+  width: 100%;
+  border-collapse: collapse;
+}
+
+.table th,
+.table td {
+  text-align: left;
+  padding: 0.8rem 0.65rem;
+  border-bottom: 1px solid var(--border-soft);
+  vertical-align: top;
+}
+
+.table th {
+  color: var(--muted);
+  font-size: 0.72rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+}
+
+.table tbody tr {
+  transition: background 0.12s ease;
+}
+
+.table tbody tr:hover {
+  background: rgba(255, 255, 255, 0.02);
+}
+
+.muted {
+  color: var(--muted);
+}
+
+.mono {
+  font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+}
+
+/* Mobile topbar + drawer */
+.mobile-topbar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 0.75rem;
+}
+
+.mobile-brand {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.brand-mark-sm {
+  width: 30px;
+  height: 30px;
+  border-radius: 9px;
+  font-size: 0.72rem;
+}
+
+.sidebar-backdrop {
+  position: fixed;
+  inset: 0;
+  border: 0;
+  background: rgba(2, 6, 14, 0.62);
+  backdrop-filter: blur(2px);
+  z-index: 40;
+}
+
+.sidebar-close {
+  display: inline-flex;
+}
+
+@media (min-width: 768px) {
+  .mobile-topbar {
+    display: none;
+  }
+
+  .sidebar-backdrop {
+    display: none;
+  }
+
+  .sidebar-close {
+    display: none;
+  }
+}
+
+/* Sidebar */
+.sidebar {
+  position: sticky;
+  top: 1rem;
+  display: none;
+  flex-direction: column;
+  min-height: calc(100vh - 2rem);
+  padding: 1rem;
+  z-index: 50;
+}
+
+.sidebar.sidebar-open {
+  display: flex;
+  position: fixed;
+  top: 0.75rem;
+  left: 0.75rem;
+  bottom: 0.75rem;
+  width: min(300px, calc(100vw - 1.5rem));
+  min-height: auto;
+  max-height: calc(100vh - 1.5rem);
+  overflow: auto;
+  animation: slideIn 0.18s ease;
+}
+
+@keyframes slideIn {
+  from {
+    transform: translateX(-12px);
+    opacity: 0.4;
+  }
+  to {
+    transform: translateX(0);
+    opacity: 1;
+  }
+}
+
+@media (min-width: 768px) {
+  .sidebar {
+    display: flex;
+    position: sticky;
+    width: auto;
+    max-height: none;
+    overflow: visible;
+  }
+
+  .sidebar.sidebar-open {
+    position: sticky;
+    top: 1rem;
+    left: auto;
+    bottom: auto;
+    width: auto;
+    min-height: calc(100vh - 2rem);
+    max-height: none;
+    animation: none;
+  }
+}
+
+.brand-mark {
+  width: 38px;
+  height: 38px;
+  border-radius: 12px;
+  display: grid;
+  place-items: center;
+  background: linear-gradient(145deg, #60a5fa, #2563eb);
+  color: white;
+  font-weight: 800;
+  font-size: 0.85rem;
+  box-shadow: 0 8px 20px rgba(37, 99, 235, 0.35);
+  flex-shrink: 0;
+}
+
+.reply-box {
+  border-top: 1px solid var(--border-soft);
+  padding-top: 1rem;
+  margin-top: 0.25rem;
+}
+
+/* Unread indicators */
+.mail-item.unread {
+  background: rgba(59, 130, 246, 0.06);
+}
+
+.mail-item.unread:hover {
+  background: rgba(59, 130, 246, 0.1);
+}
+
+.mail-item.unread .mail-subject,
+.unread-text {
+  color: #f0f6ff;
+  font-weight: 700;
+}
+
+.unread-dot {
+  display: inline-block;
+  width: 8px;
+  height: 8px;
+  border-radius: 999px;
+  background: #3b82f6;
+  box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.2);
+  margin-right: 0.4rem;
+  vertical-align: middle;
+  flex-shrink: 0;
+}
+
+.mail-from.unread-text {
+  display: flex;
+  align-items: center;
+  min-width: 0;
+}
+
+.count-pill {
+  display: inline-flex;
+  align-items: center;
+  border-radius: 999px;
+  padding: 0.15rem 0.55rem;
+  font-size: 0.72rem;
+  font-weight: 700;
+  background: rgba(59, 130, 246, 0.18);
+  border: 1px solid rgba(59, 130, 246, 0.35);
+  color: #bfdbfe;
+}
+
+.nav-badge {
+  margin-left: auto;
+  min-width: 1.25rem;
+  height: 1.25rem;
+  padding: 0 0.35rem;
+  border-radius: 999px;
+  background: #2563eb;
+  color: white;
+  font-size: 0.68rem;
+  font-weight: 700;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.nav-link {
+  display: flex;
+  align-items: center;
+  gap: 0.7rem;
+  padding: 0.7rem 0.8rem;
+  border-radius: 12px;
+  color: var(--muted);
+  border: 1px solid transparent;
+  font-weight: 550;
+  transition: 0.15s ease;
+}
+
+.nav-link:hover {
+  background: rgba(255, 255, 255, 0.03);
+  color: var(--text);
+}
+
+.nav-link.active {
+  background: var(--accent-soft);
+  border-color: rgba(59, 130, 246, 0.28);
+  color: #dbeafe;
+}
+
+.nav-ico {
+  width: 1.15rem;
+  text-align: center;
+  opacity: 0.9;
+}
+
+/* Stats */
+.stat-card {
+  position: relative;
+  overflow: hidden;
+  padding: 1rem 1.05rem;
+}
+
+.stat-card::after {
+  content: "";
+  position: absolute;
+  inset: auto -20% -40% auto;
+  width: 90px;
+  height: 90px;
+  border-radius: 999px;
+  background: rgba(59, 130, 246, 0.08);
+}
+
+.stat-value {
+  font-size: 1.7rem;
+  font-weight: 700;
+  letter-spacing: -0.03em;
+  margin-top: 0.35rem;
+}
+
+/* Inbox mail client */
+.inbox-shell {
+  display: grid;
+  gap: 0.9rem;
+  min-height: 70vh;
+}
+
+@media (min-width: 1024px) {
+  .inbox-shell {
+    grid-template-columns: 380px 1fr;
+    gap: 1rem;
+  }
+}
+
+.mail-list {
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+  max-height: 75vh;
+}
+
+.mail-list-scroll {
+  overflow: auto;
+  flex: 1;
+}
+
+.mail-item {
+  display: grid;
+  grid-template-columns: 42px 1fr;
+  gap: 0.75rem;
+  padding: 0.9rem 1rem;
+  border-bottom: 1px solid var(--border-soft);
+  cursor: pointer;
+  transition: 0.12s ease;
+}
+
+.mail-item:hover {
+  background: rgba(255, 255, 255, 0.03);
+}
+
+.mail-item.active {
+  background: var(--accent-soft);
+  border-left: 2px solid #3b82f6;
+}
+
+.avatar {
+  width: 42px;
+  height: 42px;
+  border-radius: 12px;
+  display: grid;
+  place-items: center;
+  font-weight: 700;
+  font-size: 0.78rem;
+  color: #dbeafe;
+  background: linear-gradient(145deg, #1e3a5f, #1d4ed8);
+  border: 1px solid rgba(147, 197, 253, 0.2);
+}
+
+.mail-subject {
+  font-weight: 650;
+  font-size: 0.92rem;
+  line-height: 1.3;
+}
+
+.mail-preview {
+  color: var(--muted);
+  font-size: 0.8rem;
+  margin-top: 0.2rem;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.mail-meta {
+  display: flex;
+  justify-content: space-between;
+  gap: 0.5rem;
+  align-items: center;
+  margin-bottom: 0.15rem;
+}
+
+.mail-from {
+  font-size: 0.78rem;
+  color: #b6c5dd;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.mail-time {
+  font-size: 0.72rem;
+  color: var(--muted);
+  white-space: nowrap;
+}
+
+.mail-reader {
+  min-height: 420px;
+  display: flex;
+  flex-direction: column;
+}
+
+.mail-body {
+  white-space: pre-wrap;
+  word-break: break-word;
+  line-height: 1.65;
+  font-size: 0.95rem;
+  color: #dce6f8;
+  background: rgba(0, 0, 0, 0.18);
+  border: 1px solid var(--border-soft);
+  border-radius: 12px;
+  padding: 1rem 1.1rem;
+}
+
+.empty-state {
+  display: grid;
+  place-items: center;
+  text-align: center;
+  min-height: 280px;
+  color: var(--muted);
+  padding: 2rem;
+}
+
+.alert {
+  border-radius: 12px;
+  padding: 0.75rem 0.9rem;
+  font-size: 0.9rem;
+}
+
+.alert-error {
+  color: #fecaca;
+  background: rgba(248, 113, 113, 0.1);
+  border: 1px solid rgba(248, 113, 113, 0.22);
+}
+
+.alert-success {
+  color: #bbf7d0;
+  background: rgba(34, 197, 94, 0.1);
+  border: 1px solid rgba(34, 197, 94, 0.22);
+}
+
+.login-wrap {
+  min-height: 100vh;
+  display: grid;
+  place-items: center;
+  padding: 1.25rem;
+}
+
+.login-card {
+  width: 100%;
+  max-width: 420px;
+  padding: 2rem;
+}
+
+.login-glow {
+  position: absolute;
+  inset: -1px;
+  border-radius: 18px;
+  background: linear-gradient(135deg, rgba(59, 130, 246, 0.35), transparent 40%, rgba(34, 197, 94, 0.15));
+  z-index: -1;
+  filter: blur(12px);
+  opacity: 0.7;
+}
+
+.skeleton {
+  background: linear-gradient(90deg, rgba(255,255,255,0.04), rgba(255,255,255,0.08), rgba(255,255,255,0.04));
+  background-size: 200% 100%;
+  animation: shimmer 1.2s infinite;
+  border-radius: 8px;
+}
+
+@keyframes shimmer {
+  0% { background-position: 200% 0; }
+  100% { background-position: -200% 0; }
+}
+
+/* Scrollbar */
+.mail-list-scroll::-webkit-scrollbar {
+  width: 8px;
+}
+.mail-list-scroll::-webkit-scrollbar-thumb {
+  background: #243247;
+  border-radius: 99px;
+}
+.mail-list-scroll::-webkit-scrollbar-track {
+  background: transparent;
+}
