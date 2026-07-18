@@ -6,9 +6,25 @@ const nextConfig: NextConfig = {
   // Avoid picking parent /root/package-lock.json as workspace root
   outputFileTracingRoot: path.join(__dirname),
   async headers() {
+    // NOTE: Next merges matching header rules; put media first and avoid
+    // attaching the app-shell CSP to attachment downloads.
     return [
       {
-        source: "/:path*",
+        source: "/api/messages/:path*/attachments/:path*",
+        headers: [
+          { key: "X-Content-Type-Options", value: "nosniff" },
+          { key: "Referrer-Policy", value: "no-referrer" },
+          { key: "X-Frame-Options", value: "SAMEORIGIN" },
+          {
+            key: "Content-Security-Policy",
+            value:
+              "default-src 'none'; img-src 'self' data: blob:; style-src 'unsafe-inline'; base-uri 'none'; frame-ancestors 'self'",
+          },
+        ],
+      },
+      {
+        // App shell only (exclude attachment binary routes via separate rule above)
+        source: "/((?!api/messages/.*/attachments/).*)",
         headers: [
           { key: "X-Content-Type-Options", value: "nosniff" },
           { key: "X-Frame-Options", value: "DENY" },

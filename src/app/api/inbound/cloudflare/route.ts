@@ -1,8 +1,18 @@
 import { z } from "zod";
+import { storeAttachments } from "@/lib/attachments";
 import { prisma } from "@/lib/db";
 import { cleanEmailBody } from "@/lib/email-body";
+import { recoverInlineAttachments } from "@/lib/inline-mime";
 import { clientIp, rateLimit, safeEqual } from "@/lib/security";
 import { badRequest, json } from "@/lib/utils";
+import { notifyNewInboundEmail } from "@/lib/web-push";
+
+const attachmentSchema = z.object({
+  filename: z.string().max(200).optional().default("file"),
+  contentType: z.string().max(120).optional().default("application/octet-stream"),
+  contentBase64: z.string().min(1).max(4_000_000),
+  size: z.number().int().positive().optional(),
+});
 
 const schema = z.object({
   from: z.string().min(1).max(500),
@@ -12,6 +22,7 @@ const schema = z.object({
   html: z.string().max(500_000).optional().nullable(),
   headers: z.record(z.string(), z.string()).optional(),
   raw: z.string().max(50_000).optional().nullable(),
+  attachments: z.array(attachmentSchema).max(5).optional(),
 });
 
 function extractDomain(addr: string): string | null {
@@ -30,9 +41,9 @@ export async function POST(req: Request) {
     return json({ error: "Rate limit exceeded" }, 429);
   }
 
-  // Reject oversized bodies early
+  // Allow a bit more for small base64 attachments
   const cl = Number(req.headers.get("content-length") || 0);
-  if (cl > 600_000) {
+  if (cl > 8_000_000) {
     return json({ error: "Payload too large" }, 413);
   }
 
@@ -67,8 +78,6 @@ export async function POST(req: Request) {
     domainId = domain?.id ?? null;
   }
 
-  // Optional: only accept mail for known active aliases when CF catch-all is off this is defense-in-depth
-  // (still store if domain registered; unknown local parts can be dropped if STRICT_ALIAS_INBOUND=true)
   if (process.env.STRICT_ALIAS_INBOUND === "true" && domainId) {
     const local = (firstTo.split("@")[0] || "").toLowerCase();
     const alias = await prisma.alias.findFirst({
@@ -80,7 +89,8 @@ export async function POST(req: Request) {
   }
 
   const cleaned = cleanEmailBody(parsed.data.text, parsed.data.html);
-  const textBody = cleaned === "(empty body)" ? parsed.data.text || null : cleaned;
+  let textBody = cleaned === "(empty body)" ? parsed.data.text || null : cleaned;
+  let htmlBody = parsed.data.html || null;
 
   const message = await prisma.message.create({
     data: {
@@ -91,7 +101,7 @@ export async function POST(req: Request) {
       toAddr,
       subject: parsed.data.subject || "(no subject)",
       textBody,
-      htmlBody: parsed.data.html || null,
+      htmlBody,
       headersJson: parsed.data.headers ? JSON.stringify(parsed.data.headers) : null,
       rawMetaJson: parsed.data.raw
         ? JSON.stringify({ rawPreview: parsed.data.raw.slice(0, 4000) })
@@ -100,5 +110,62 @@ export async function POST(req: Request) {
     },
   });
 
-  return json({ ok: true, id: message.id }, 201);
+  let attachmentsCount = 0;
+  const storedAll = [];
+
+  if (parsed.data.attachments?.length) {
+    try {
+      const stored = await storeAttachments(
+        message.id,
+        parsed.data.attachments.map((a) => ({
+          filename: a.filename,
+          contentType: a.contentType,
+          contentBase64: a.contentBase64,
+          size: a.size,
+        }))
+      );
+      storedAll.push(...stored);
+    } catch {
+      // keep message even if attachment store fails
+    }
+  }
+
+  // Recover inline images dumped into body by simple workers
+  try {
+    const recovered = await recoverInlineAttachments(message.id, textBody, htmlBody);
+    if (recovered.stored.length) storedAll.push(...recovered.stored);
+    textBody = recovered.textBody;
+    htmlBody = recovered.htmlBody;
+    // re-clean text after stripping base64 dump
+    if (textBody) {
+      const again = cleanEmailBody(textBody, htmlBody);
+      if (again && again !== "(empty body)") textBody = again;
+    }
+  } catch {
+    /* ignore recovery errors */
+  }
+
+  attachmentsCount = storedAll.length;
+  const updated = await prisma.message.update({
+    where: { id: message.id },
+    data: {
+      textBody,
+      htmlBody,
+      attachmentsJson: storedAll.length ? JSON.stringify(storedAll) : null,
+    },
+  });
+
+  // Web Push (best-effort; don't fail inbound if push fails)
+  try {
+    await notifyNewInboundEmail({
+      id: updated.id,
+      fromAddr: updated.fromAddr,
+      subject: updated.subject,
+      toAddr: updated.toAddr,
+    });
+  } catch {
+    /* ignore */
+  }
+
+  return json({ ok: true, id: message.id, attachments: attachmentsCount }, 201);
 }

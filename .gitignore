@@ -50,3 +50,7 @@ prisma/*.db-journal
 
 # local only
 .DS_Store
+
+# local attachment storage
+/data
+data/attachments/

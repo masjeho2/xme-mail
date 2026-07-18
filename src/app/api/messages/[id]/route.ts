@@ -59,3 +59,15 @@ export async function PATCH(req: Request, ctx: { params: Promise<{ id: string }>
 
   return json({ message });
 }
+
+export async function DELETE(_req: Request, ctx: { params: Promise<{ id: string }> }) {
+  const session = await requireSession();
+  if (!session) return unauthorized();
+
+  const { id } = await ctx.params;
+  const existing = await prisma.message.findUnique({ where: { id } });
+  if (!existing) return notFound("Message not found");
+
+  await prisma.message.delete({ where: { id } });
+  return json({ ok: true, id });
+}

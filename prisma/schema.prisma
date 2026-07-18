@@ -63,25 +63,36 @@ model ApiKey {
 }
 
 model Message {
-  id           String   @id @default(cuid())
-  direction    String // inbound | outbound
-  status       String   @default("received") // received | sent | failed | queued
-  isRead       Boolean  @default(false)
-  fromAddr     String
-  toAddr       String
-  subject      String   @default("")
-  textBody     String?
-  htmlBody     String?
-  providerId   String?
-  error        String?
-  headersJson  String?
-  rawMetaJson  String?
-  domainId     String?
-  domain       Domain?  @relation(fields: [domainId], references: [id], onDelete: SetNull)
-  createdAt    DateTime @default(now())
+  id               String   @id @default(cuid())
+  direction        String // inbound | outbound
+  status           String   @default("received") // received | sent | failed | queued
+  isRead           Boolean  @default(false)
+  fromAddr         String
+  toAddr           String
+  subject          String   @default("")
+  textBody         String?
+  htmlBody         String?
+  providerId       String?
+  error            String?
+  headersJson      String?
+  rawMetaJson      String?
+  attachmentsJson  String?
+  domainId         String?
+  domain           Domain?  @relation(fields: [domainId], references: [id], onDelete: SetNull)
+  createdAt        DateTime @default(now())
 
   @@index([direction, createdAt])
   @@index([direction, isRead])
   @@index([toAddr])
   @@index([fromAddr])
+}
+
+model PushSubscription {
+  id        String   @id @default(cuid())
+  endpoint  String   @unique
+  p256dh    String
+  auth      String
+  userAgent String?
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
 }

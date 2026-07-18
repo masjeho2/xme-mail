@@ -1,12 +1,39 @@
 "use client";
 
-import { FormEvent, useEffect, useMemo, useState } from "react";
+import { FormEvent, useCallback, useEffect, useMemo, useRef, useState } from "react";
 import {
   cleanEmailBody,
+  displayFrom,
   formatRelativeTime,
   initialsFromEmail,
+  linkifySegments,
   previewText,
 } from "@/lib/email-body";
+import {
+  ensureNotificationPermission,
+  getDesktopNotifEnabled,
+  getSoundEnabled,
+  notificationPermission,
+  notifyNewMails,
+  playNewMailSound,
+  setDesktopNotifEnabled,
+  setSoundEnabled,
+  unlockAudio,
+} from "@/lib/notify";
+import {
+  isPushActive,
+  pushSupported,
+  registerServiceWorker,
+  subscribeWebPush,
+} from "@/lib/push-client";
+
+type AttachmentMeta = {
+  id: string;
+  filename: string;
+  contentType: string;
+  size: number;
+  storagePath: string;
+};
 
 type Message = {
   id: string;
@@ -18,8 +45,25 @@ type Message = {
   subject: string;
   textBody?: string | null;
   htmlBody?: string | null;
+  attachmentsJson?: string | null;
   createdAt: string;
 };
+
+function parseAttachments(json?: string | null): AttachmentMeta[] {
+  if (!json) return [];
+  try {
+    const v = JSON.parse(json);
+    return Array.isArray(v) ? (v as AttachmentMeta[]) : [];
+  } catch {
+    return [];
+  }
+}
+
+function formatBytes(n: number): string {
+  if (n < 1024) return `${n} B`;
+  if (n < 1024 * 1024) return `${(n / 1024).toFixed(1)} KB`;
+  return `${(n / (1024 * 1024)).toFixed(1)} MB`;
+}
 
 type Alias = {
   id: string;
@@ -57,29 +101,186 @@ export default function InboxPage() {
   const [replyResult, setReplyResult] = useState("");
   const [replyError, setReplyError] = useState("");
 
-  async function load() {
-    setLoading(true);
+  const [soundOn, setSoundOn] = useState(true);
+  const [, setDesktopOn] = useState(true);
+  const [autoRefresh, setAutoRefresh] = useState(true);
+  const [lastCheckAt, setLastCheckAt] = useState<Date | null>(null);
+  const [pollFlash, setPollFlash] = useState(false);
+  const [notifPerm, setNotifPerm] = useState<NotificationPermission | "unsupported">("default");
+  const [pushActive, setPushActive] = useState(false);
+  const [alertInfo, setAlertInfo] = useState("");
+
+  const knownIdsRef = useRef<Set<string> | null>(null);
+  const selectedIdRef = useRef<string | null>(null);
+  const initialLoadDone = useRef(false);
+
+  useEffect(() => {
+    selectedIdRef.current = selected?.id ?? null;
+  }, [selected?.id]);
+
+  useEffect(() => {
+    setSoundOn(getSoundEnabled());
+    setDesktopOn(getDesktopNotifEnabled());
+    setNotifPerm(notificationPermission());
+    // Detect existing web-push subscription so the big button can hide
+    void (async () => {
+      try {
+        await registerServiceWorker();
+        const active = await isPushActive();
+        setPushActive(active);
+      } catch {
+        setPushActive(false);
+      }
+    })();
+  }, []);
+
+  async function enableAlerts() {
     setError("");
+    setAlertInfo("");
+
+    // 1) Unlock audio from this user click (required by browsers)
+    const audioOk = await unlockAudio();
+    setSoundOn(true);
+    setSoundEnabled(true);
+    playNewMailSound(true);
+
+    // 2) Request notification permission from this same click
+    const perm = await ensureNotificationPermission();
+    setNotifPerm(perm);
+
+    if (perm === "granted") {
+      setDesktopOn(true);
+      setDesktopNotifEnabled(true);
+
+      // 3) Web Push (works even when browser is closed, if OS allows)
+      let pushMsg = "";
+      let active = false;
+      if (pushSupported()) {
+        await registerServiceWorker();
+        const push = await subscribeWebPush();
+        active = Boolean(push.ok);
+        pushMsg = push.ok
+          ? " Web Push aktif (bisa notif meski tab ditutup)."
+          : ` Web Push gagal: ${push.error || "unknown"}`;
+      } else {
+        pushMsg = " Browser ini tidak support Web Push background.";
+      }
+      setPushActive(active);
+
+      try {
+        new Notification("xme-mail siap", {
+          body: "Notifikasi email baru aktif." + pushMsg,
+          icon: "/icons/icon-192.png?v=3",
+          tag: "xme-mail-ready",
+        });
+      } catch {
+        /* ignore */
+      }
+      setAlertInfo(
+        (audioOk ? "Suara + notifikasi aktif." : "Notifikasi aktif. Suara mungkin masih diblok browser.") +
+          pushMsg
+      );
+      // auto-hide success banner
+      window.setTimeout(() => setAlertInfo(""), 4000);
+      return;
+    }
+
+    if (perm === "denied") {
+      setDesktopOn(false);
+      setDesktopNotifEnabled(false);
+      setPushActive(false);
+      setError(
+        "Browser memblokir notifikasi. Buka ikon gembok di address bar → Site settings → Notifications → Allow, lalu klik Aktifkan notif lagi."
+      );
+      return;
+    }
+
+    if (perm === "unsupported") {
+      setDesktopOn(false);
+      setDesktopNotifEnabled(false);
+      setPushActive(false);
+      setAlertInfo(
+        audioOk
+          ? "Suara aktif. Browser ini tidak support Notification API."
+          : "Browser tidak support notifikasi desktop."
+      );
+      return;
+    }
+
+    // default / dismissed
+    setDesktopOn(false);
+    setDesktopNotifEnabled(false);
+    setPushActive(false);
+    setAlertInfo("Popup izin ditutup. Klik lagi tombol Aktifkan push notif.");
+  }
+
+  const load = useCallback(async (opts?: { silent?: boolean }) => {
+    const silent = Boolean(opts?.silent);
+    if (!silent) {
+      setLoading(true);
+      setError("");
+    }
     try {
-      const res = await fetch("/api/messages?direction=inbound&limit=100");
+      const res = await fetch("/api/messages?direction=inbound&limit=100", {
+        cache: "no-store",
+      });
       const data = await res.json();
       if (!res.ok) throw new Error(data.error || "Failed");
       const list: Message[] = data.messages || [];
+
+      // Detect brand-new messages after first successful load
+      const prev = knownIdsRef.current;
+      if (prev) {
+        const fresh = list.filter((m) => !prev.has(m.id));
+        if (fresh.length) {
+          notifyNewMails(
+            fresh.map((m) => ({
+              id: m.id,
+              from: displayFrom(m.fromAddr),
+              subject: m.subject || "(no subject)",
+            })),
+            (id) => {
+              // best-effort open when user clicks notification
+              void (async () => {
+                const r = await fetch(`/api/messages/${id}`);
+                const d = await r.json();
+                if (r.ok && d.message) {
+                  setSelected(d.message);
+                  setMessages((cur) =>
+                    cur.map((x) => (x.id === id ? { ...x, isRead: true } : x))
+                  );
+                }
+              })();
+            }
+          );
+          setPollFlash(true);
+          window.setTimeout(() => setPollFlash(false), 2500);
+        }
+      }
+      knownIdsRef.current = new Set(list.map((m) => m.id));
+
       setMessages(list);
-      if (selected) {
-        const still = list.find((m) => m.id === selected.id);
+      setLastCheckAt(new Date());
+
+      const selId = selectedIdRef.current;
+      if (selId) {
+        const still = list.find((m) => m.id === selId);
         if (!still) setSelected(null);
-        else setSelected((prev) => (prev ? { ...prev, isRead: still.isRead } : prev));
+        else
+          setSelected((prevSel) =>
+            prevSel ? { ...prevSel, isRead: still.isRead } : prevSel
+          );
       }
     } catch (e) {
-      setError(e instanceof Error ? e.message : "Error");
+      if (!silent) setError(e instanceof Error ? e.message : "Error");
     } finally {
-      setLoading(false);
+      if (!silent) setLoading(false);
+      initialLoadDone.current = true;
     }
-  }
+  }, []);
 
   useEffect(() => {
-    load();
+    void load();
     fetch("/api/aliases")
       .then(async (r) => {
         const d = await r.json();
@@ -91,8 +292,25 @@ export default function InboxPage() {
         if (list[0]) setReplyFrom(list[0]);
       })
       .catch(() => {});
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
+  }, [load]);
+
+  // Auto-refresh every 12s while tab visible
+  useEffect(() => {
+    if (!autoRefresh) return;
+    const tick = () => {
+      if (document.visibilityState !== "visible") return;
+      void load({ silent: true });
+    };
+    const id = window.setInterval(tick, 12_000);
+    const onVis = () => {
+      if (document.visibilityState === "visible") tick();
+    };
+    document.addEventListener("visibilitychange", onVis);
+    return () => {
+      window.clearInterval(id);
+      document.removeEventListener("visibilitychange", onVis);
+    };
+  }, [autoRefresh, load]);
 
   async function openMessage(id: string) {
     setError("");
@@ -147,6 +365,42 @@ export default function InboxPage() {
     if (selected) setSelected({ ...selected, isRead: true });
   }
 
+  async function deleteMessage(id: string) {
+    if (!confirm("Hapus pesan ini?")) return;
+    setError("");
+    const res = await fetch(`/api/messages/${id}`, { method: "DELETE" });
+    const data = await res.json().catch(() => ({}));
+    if (!res.ok) {
+      setError(data.error || "Gagal hapus pesan");
+      return;
+    }
+    setMessages((prev) => prev.filter((m) => m.id !== id));
+    if (selected?.id === id) {
+      setSelected(null);
+      setReplyOpen(false);
+    }
+    setReplyResult("Pesan dihapus");
+  }
+
+  async function deleteAllInbound() {
+    if (!confirm("Hapus SEMUA pesan di Inbox? Tindakan ini tidak bisa dibatalkan.")) return;
+    setError("");
+    const res = await fetch("/api/messages", {
+      method: "DELETE",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ allInbound: true }),
+    });
+    const data = await res.json().catch(() => ({}));
+    if (!res.ok) {
+      setError(data.error || "Gagal hapus inbox");
+      return;
+    }
+    setMessages([]);
+    setSelected(null);
+    setReplyOpen(false);
+    setReplyResult(`Inbox dikosongkan (${data.count ?? 0} pesan)`);
+  }
+
   const unreadCount = useMemo(
     () => messages.filter((m) => !m.isRead).length,
     [messages]
@@ -169,6 +423,11 @@ export default function InboxPage() {
   }, [messages, query, filter]);
 
   const selectedBody = selected ? cleanEmailBody(selected.textBody, selected.htmlBody) : "";
+  const selectedBodyParts = useMemo(() => linkifySegments(selectedBody), [selectedBody]);
+  const selectedAttachments = useMemo(
+    () => (selected ? parseAttachments(selected.attachmentsJson) : []),
+    [selected]
+  );
 
   async function onReply(e: FormEvent) {
     e.preventDefault();
@@ -217,19 +476,78 @@ export default function InboxPage() {
           </h1>
           <p className="page-sub">Email masuk via Cloudflare → Worker → panel</p>
         </div>
-        <div className="flex flex-wrap gap-2">
+        <div className="flex flex-wrap gap-2 items-center">
+          <label className="notify-toggle" title="Auto-refresh inbox tiap 12 detik">
+            <input
+              type="checkbox"
+              checked={autoRefresh}
+              onChange={(e) => setAutoRefresh(e.target.checked)}
+            />
+            <span>Auto</span>
+          </label>
+          <label className="notify-toggle" title="Suara saat email baru">
+            <input
+              type="checkbox"
+              checked={soundOn}
+              onChange={(e) => {
+                const on = e.target.checked;
+                setSoundOn(on);
+                setSoundEnabled(on);
+                if (on) void unlockAudio().then(() => playNewMailSound(true));
+              }}
+            />
+            <span>Suara</span>
+          </label>
+          {pushActive ? (
+            <span className="notify-toggle" title="Web Push aktif di browser ini" style={{ cursor: "default" }}>
+              <span className="inline-block w-2 h-2 rounded-full bg-emerald-400" />
+              <span>Push aktif</span>
+            </span>
+          ) : (
+            <button
+              type="button"
+              className="btn btn-primary btn-sm"
+              onClick={() => void enableAlerts()}
+              title="Aktifkan notifikasi desktop + Web Push (background) + suara"
+            >
+              Aktifkan push notif
+            </button>
+          )}
           {unreadCount > 0 ? (
             <button className="btn btn-ghost btn-sm" type="button" onClick={markAllRead}>
               Tandai semua dibaca
             </button>
           ) : null}
-          <button className="btn btn-ghost btn-sm" type="button" onClick={() => load()}>
-            Refresh
+          {messages.length > 0 ? (
+            <button className="btn btn-danger btn-sm" type="button" onClick={deleteAllInbound}>
+              Hapus semua
+            </button>
+          ) : null}
+          <button
+            className={`btn btn-ghost btn-sm ${pollFlash ? "btn-primary" : ""}`}
+            type="button"
+            onClick={() => load()}
+            title={lastCheckAt ? `Cek terakhir: ${lastCheckAt.toLocaleTimeString("id-ID")}` : "Refresh"}
+          >
+            {pollFlash ? "Email baru!" : "Refresh"}
           </button>
         </div>
       </div>
 
+      {notifPerm !== "granted" ? (
+        <div className="alert alert-info">
+          Belum ada izin notifikasi browser. Klik tombol <b>Aktifkan notif & suara</b> di atas —
+          popup izin hanya muncul dari klik tombol itu (bukan otomatis).
+          {notifPerm === "denied" ? (
+            <span>
+              {" "}
+              Status sekarang: <b>diblokir</b>. Buka ikon gembok URL → Notifications → Allow.
+            </span>
+          ) : null}
+        </div>
+      ) : null}
       {error ? <div className="alert alert-error">{error}</div> : null}
+      {alertInfo ? <div className="alert alert-success">{alertInfo}</div> : null}
       {replyResult ? <div className="alert alert-success">{replyResult}</div> : null}
 
       <div className="inbox-shell">
@@ -297,11 +615,24 @@ export default function InboxPage() {
                     <div className="avatar">{initialsFromEmail(m.fromAddr)}</div>
                     <div className="min-w-0">
                       <div className="mail-meta">
-                        <div className={`mail-from ${unread ? "unread-text" : ""}`}>
+                        <div className={`mail-from ${unread ? "unread-text" : ""}`} title={m.fromAddr}>
                           {unread ? <span className="unread-dot" aria-hidden /> : null}
-                          {m.fromAddr}
+                          {displayFrom(m.fromAddr)}
                         </div>
-                        <div className="mail-time">{formatRelativeTime(m.createdAt)}</div>
+                        <div className="flex items-center gap-2">
+                          <div className="mail-time">{formatRelativeTime(m.createdAt)}</div>
+                          <button
+                            type="button"
+                            className="btn btn-danger btn-sm"
+                            title="Hapus"
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              deleteMessage(m.id);
+                            }}
+                          >
+                            🗑
+                          </button>
+                        </div>
                       </div>
                       <div className={`mail-subject ${unread ? "unread-text" : ""}`}>
                         {m.subject || "(no subject)"}
@@ -370,10 +701,92 @@ export default function InboxPage() {
                   >
                     {replyOpen ? "Tutup" : "Balas"}
                   </button>
+                  <button
+                    type="button"
+                    className="btn btn-danger btn-sm"
+                    onClick={() => deleteMessage(selected.id)}
+                  >
+                    Hapus
+                  </button>
                 </div>
               </div>
 
-              <div className="mail-body">{selectedBody}</div>
+              {selectedAttachments.length > 0 ? (
+                <div className="attach-list space-y-3">
+                  <div className="muted text-xs uppercase tracking-wide">
+                    Lampiran ({selectedAttachments.length})
+                  </div>
+
+                  {/* Full image previews inside the reader */}
+                  <div className="space-y-3">
+                    {selectedAttachments
+                      .filter((a) => a.contentType.startsWith("image/"))
+                      .map((a) => {
+                        const href = `/api/messages/${selected.id}/attachments/${a.id}`;
+                        return (
+                          <a
+                            key={`preview-${a.id}`}
+                            href={href}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="attach-preview-card"
+                            title={a.filename}
+                          >
+                            {/* eslint-disable-next-line @next/next/no-img-element */}
+                            <img src={href} alt={a.filename} className="attach-preview-img" />
+                            <div className="attach-preview-meta">
+                              <span className="attach-name">{a.filename}</span>
+                              <span className="attach-size">{formatBytes(a.size)} · klik untuk buka</span>
+                            </div>
+                          </a>
+                        );
+                      })}
+                  </div>
+
+                  {/* Non-image files as chips */}
+                  <div className="flex flex-wrap gap-2">
+                    {selectedAttachments
+                      .filter((a) => !a.contentType.startsWith("image/"))
+                      .map((a) => {
+                        const href = `/api/messages/${selected.id}/attachments/${a.id}`;
+                        return (
+                          <a
+                            key={a.id}
+                            href={href}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="attach-chip"
+                            title={a.filename}
+                          >
+                            <span className="attach-icon">📎</span>
+                            <span className="min-w-0">
+                              <span className="attach-name">{a.filename}</span>
+                              <span className="attach-size">{formatBytes(a.size)}</span>
+                            </span>
+                          </a>
+                        );
+                      })}
+                  </div>
+                </div>
+              ) : null}
+
+              <div className="mail-body">
+                {selectedBodyParts.map((part, i) =>
+                  part.type === "link" ? (
+                    <a
+                      key={`${i}-${part.value.slice(0, 24)}`}
+                      href={part.value}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="mail-link"
+                    >
+                      {part.value}
+                    </a>
+                  ) : (
+                    <span key={i}>{part.value}</span>
+                  )
+                )}
+              </div>
 
               {replyOpen ? (
                 <form onSubmit={onReply} className="reply-box space-y-3">
