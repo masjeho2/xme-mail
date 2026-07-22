@@ -1,5 +1,6 @@
 import webpush from "web-push";
 import { prisma } from "@/lib/db";
+import { logger } from "@/lib/logger";
 
 export type PushPayload = {
   title: string;
@@ -62,8 +63,12 @@ export async function sendPushToAll(payload: PushPayload) {
         const status = (e as { statusCode?: number })?.statusCode;
         // Gone / expired subscription
         if (status === 404 || status === 410) {
-          await prisma.pushSubscription.delete({ where: { id: sub.id } }).catch(() => {});
+          await prisma.pushSubscription
+            .delete({ where: { id: sub.id } })
+            .catch((err) => logger.warn("push sub delete failed", err));
           removed++;
+        } else {
+          logger.warn("push send failed", { status, endpoint: sub.endpoint.slice(0, 48) });
         }
       }
     })

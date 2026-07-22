@@ -1,6 +1,7 @@
 "use client";
 
-import { FormEvent, useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { FormEvent, Suspense, useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { useSearchParams } from "next/navigation";
 import {
   cleanEmailBody,
   displayFrom,
@@ -85,7 +86,10 @@ function replySubject(subject: string): string {
   return /^re:/i.test(s) ? s : `Re: ${s}`;
 }
 
-export default function InboxPage() {
+function InboxPageInner() {
+  const searchParams = useSearchParams();
+  const openFromUrl = searchParams.get("open");
+
   const [messages, setMessages] = useState<Message[]>([]);
   const [selected, setSelected] = useState<Message | null>(null);
   const [aliases, setAliases] = useState<string[]>([]);
@@ -93,6 +97,7 @@ export default function InboxPage() {
   const [filter, setFilter] = useState<"all" | "unread">("all");
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(true);
+  const openedFromUrlRef = useRef<string | null>(null);
 
   const [replyOpen, setReplyOpen] = useState(false);
   const [replyFrom, setReplyFrom] = useState("");
@@ -312,28 +317,50 @@ export default function InboxPage() {
     };
   }, [autoRefresh, load]);
 
-  async function openMessage(id: string) {
-    setError("");
-    setReplyOpen(false);
-    setReplyResult("");
-    setReplyError("");
-    setReplyText("");
-    const res = await fetch(`/api/messages/${id}`);
-    const data = await res.json();
-    if (!res.ok) {
-      setError(data.error || "Gagal buka pesan");
-      return;
-    }
-    const msg: Message = data.message;
-    setSelected(msg);
-    // Reflect read state in list immediately
-    setMessages((prev) => prev.map((m) => (m.id === id ? { ...m, isRead: true } : m)));
+  const openMessage = useCallback(
+    async (id: string) => {
+      setError("");
+      setReplyOpen(false);
+      setReplyResult("");
+      setReplyError("");
+      setReplyText("");
+      const res = await fetch(`/api/messages/${id}`);
+      const data = await res.json();
+      if (!res.ok) {
+        setError(data.error || "Gagal buka pesan");
+        return;
+      }
+      const msg: Message = data.message;
+      setSelected(msg);
+      // Reflect read state in list immediately
+      setMessages((prev) => prev.map((m) => (m.id === id ? { ...m, isRead: true } : m)));
 
-    const to = extractEmail(msg.toAddr).toLowerCase();
-    const match = aliases.find((a) => a.toLowerCase() === to);
-    if (match) setReplyFrom(match);
-    else if (aliases[0]) setReplyFrom(aliases[0]);
-  }
+      const to = extractEmail(msg.toAddr).toLowerCase();
+      setAliases((current) => {
+        const match = current.find((a) => a.toLowerCase() === to);
+        if (match) setReplyFrom(match);
+        else if (current[0]) setReplyFrom(current[0]);
+        return current;
+      });
+    },
+    []
+  );
+
+  // Deep-link from Web Push: /dashboard/inbox?open=<messageId>
+  useEffect(() => {
+    if (!openFromUrl) return;
+    if (openedFromUrlRef.current === openFromUrl) return;
+    openedFromUrlRef.current = openFromUrl;
+    void openMessage(openFromUrl);
+    // Clean query from URL without reload (keeps history tidy)
+    try {
+      const url = new URL(window.location.href);
+      url.searchParams.delete("open");
+      window.history.replaceState({}, "", url.pathname + (url.search || ""));
+    } catch {
+      /* ignore */
+    }
+  }, [openFromUrl, openMessage]);
 
   async function toggleRead(id: string, isRead: boolean) {
     const res = await fetch(`/api/messages/${id}`, {
@@ -841,5 +868,13 @@ export default function InboxPage() {
         </div>
       </div>
     </div>
+  );
+}
+
+export default function InboxPage() {
+  return (
+    <Suspense fallback={<div className="muted p-6">Memuat inbox...</div>}>
+      <InboxPageInner />
+    </Suspense>
   );
 }

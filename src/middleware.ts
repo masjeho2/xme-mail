@@ -5,13 +5,21 @@ import { sessionOptions, SessionData } from "@/lib/session";
 const publicExact = new Set(["/login", "/api/auth/login"]);
 const publicPrefixes = ["/api/inbound/cloudflare", "/api/v1/"];
 
+/** Static asset extensions that may skip auth (files under /public, icons, etc.) */
+const STATIC_EXT =
+  /\.(?:js|css|map|png|jpe?g|gif|webp|svg|ico|woff2?|ttf|eot|txt|xml|webmanifest|json)$/i;
+
 export async function middleware(req: NextRequest) {
   const { pathname } = req.nextUrl;
 
+  // Framework / static assets only — never skip auth for API-ish paths just because of a dot
   if (
     pathname.startsWith("/_next") ||
-    pathname.startsWith("/favicon") ||
-    pathname.includes(".")
+    pathname === "/favicon.ico" ||
+    pathname.startsWith("/icons/") ||
+    pathname === "/sw.js" ||
+    pathname === "/manifest.webmanifest" ||
+    (STATIC_EXT.test(pathname) && !pathname.startsWith("/api/"))
   ) {
     return NextResponse.next();
   }
@@ -39,5 +47,5 @@ export async function middleware(req: NextRequest) {
 }
 
 export const config = {
-  matcher: ["/((?!_next/static|_next/image|favicon.ico).*)"],
+  matcher: ["/((?!_next/static|_next/image).*)"],
 };

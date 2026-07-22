@@ -3,6 +3,7 @@ import { storeAttachments } from "@/lib/attachments";
 import { prisma } from "@/lib/db";
 import { cleanEmailBody } from "@/lib/email-body";
 import { recoverInlineAttachments } from "@/lib/inline-mime";
+import { logger } from "@/lib/logger";
 import { clientIp, rateLimit, safeEqual } from "@/lib/security";
 import { badRequest, json } from "@/lib/utils";
 import { notifyNewInboundEmail } from "@/lib/web-push";
@@ -125,8 +126,9 @@ export async function POST(req: Request) {
         }))
       );
       storedAll.push(...stored);
-    } catch {
+    } catch (e) {
       // keep message even if attachment store fails
+      logger.warn("attachment store failed", e);
     }
   }
 
@@ -141,8 +143,8 @@ export async function POST(req: Request) {
       const again = cleanEmailBody(textBody, htmlBody);
       if (again && again !== "(empty body)") textBody = again;
     }
-  } catch {
-    /* ignore recovery errors */
+  } catch (e) {
+    logger.warn("inline attachment recovery failed", e);
   }
 
   attachmentsCount = storedAll.length;
@@ -163,8 +165,8 @@ export async function POST(req: Request) {
       subject: updated.subject,
       toAddr: updated.toAddr,
     });
-  } catch {
-    /* ignore */
+  } catch (e) {
+    logger.warn("web push notify failed", e);
   }
 
   return json({ ok: true, id: message.id, attachments: attachmentsCount }, 201);
