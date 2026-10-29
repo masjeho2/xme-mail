@@ -10,28 +10,33 @@ import {
 export { decodeQuotedPrintable, looksLikeQuotedPrintable, repairCorruptedUrls, stripInvisibleNoise } from "@/lib/email-noise";
 
 function decodeHtmlEntities(s: string): string {
-  return s
-    .replace(/&nbsp;/gi, " ")
-    .replace(/&amp;/gi, "&")
-    .replace(/&lt;/gi, "<")
-    .replace(/&gt;/gi, ">")
-    .replace(/&quot;/gi, '"')
-    .replace(/&#39;/g, "'")
-    .replace(/&apos;/gi, "'")
-    .replace(/&#(\d+);/g, (_, n) => {
-      try {
-        return String.fromCodePoint(Number(n));
-      } catch {
-        return "";
-      }
-    })
-    .replace(/&#x([0-9a-f]+);/gi, (_, h) => {
-      try {
-        return String.fromCodePoint(parseInt(h, 16));
-      } catch {
-        return "";
-      }
-    });
+  return (
+    s
+      // invisible/formatting entities — strip to space (tracking noise, soft hyphens)
+      .replace(/&nbsp;|&shy;|&zwnj;|&zwj;|&lrm;|&rlm;|&NoSp;|&#8203;|&#8288;|&#8289;|&#8290;|&#8291;/gi, " ")
+      .replace(/&amp;/gi, "&")
+      .replace(/&lt;/gi, "<")
+      .replace(/&gt;/gi, ">")
+      .replace(/&quot;/gi, '"')
+      .replace(/&#39;/g, "'")
+      .replace(/&apos;/gi, "'")
+      .replace(/&#(\d+);/g, (_, n) => {
+        try {
+          return String.fromCodePoint(Number(n));
+        } catch {
+          return "";
+        }
+      })
+      .replace(/&#x([0-9a-f]+);/gi, (_, h) => {
+        try {
+          return String.fromCodePoint(parseInt(h, 16));
+        } catch {
+          return "";
+        }
+      })
+      // collapse the longspaceruns left behind
+      .replace(/ {2,}/g, " ")
+  );
 }
 
 function normalizeHref(href: string): string {
