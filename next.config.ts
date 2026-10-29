@@ -23,8 +23,8 @@ const nextConfig: NextConfig = {
         ],
       },
       {
-        // App shell only (exclude attachment binary routes via separate rule above)
-        source: "/((?!api/messages/.*/attachments/).*)",
+        // App shell only (exclude attachment downloads + frameable email html)
+        source: "/((?!api/messages/.*/attachments/|api/messages/.*/html).*)",
         headers: [
           { key: "X-Content-Type-Options", value: "nosniff" },
           { key: "X-Frame-Options", value: "DENY" },
