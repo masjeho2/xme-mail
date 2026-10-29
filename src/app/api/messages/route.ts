@@ -2,6 +2,7 @@ import { z } from "zod";
 import { requireSession, unauthorized } from "@/lib/auth";
 import { prisma } from "@/lib/db";
 import { cleanEmailBody, previewText } from "@/lib/email-body";
+import { decodeMimeHeader } from "@/lib/mime-headers";
 import { badRequest, json } from "@/lib/utils";
 
 export async function GET(req: Request) {
@@ -31,8 +32,10 @@ export async function GET(req: Request) {
 
   if (withBodies) return json({ messages });
 
+  // Decode legacy RFC 2047 subjects (= ?UTF-8?B?...?=) for display
   const light = messages.map(({ textBody, htmlBody, ...rest }) => ({
     ...rest,
+    subject: decodeMimeHeader(rest.subject) || rest.subject,
     bodyPreview: previewText(cleanEmailBody(textBody, htmlBody), 140),
     hasHtml: Boolean(htmlBody),
   }));

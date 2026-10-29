@@ -1,6 +1,7 @@
 import { z } from "zod";
 import { requireSession, unauthorized } from "@/lib/auth";
 import { prisma } from "@/lib/db";
+import { decodeMimeHeader } from "@/lib/mime-headers";
 import { badRequest, json, notFound } from "@/lib/utils";
 
 export async function GET(req: Request, ctx: { params: Promise<{ id: string }> }) {
@@ -26,7 +27,8 @@ export async function GET(req: Request, ctx: { params: Promise<{ id: string }> }
     });
   }
 
-  return json({ message });
+  // Decode legacy RFC 2047 subject at read time (older inbound rows store it raw)
+  return json({ message: { ...message, subject: decodeMimeHeader(message.subject) } });
 }
 
 const patchSchema = z.object({

@@ -2,6 +2,7 @@ import { z } from "zod";
 import { storeAttachments } from "@/lib/attachments";
 import { prisma } from "@/lib/db";
 import { cleanEmailBody } from "@/lib/email-body";
+import { decodeMimeHeader } from "@/lib/mime-headers";
 import { recoverInlineAttachments } from "@/lib/inline-mime";
 import { logger } from "@/lib/logger";
 import { clientIp, rateLimit, safeEqual } from "@/lib/security";
@@ -72,6 +73,9 @@ export async function POST(req: Request) {
 
   const toAddr = normalizeTo(parsed.data.to);
   const firstTo = (Array.isArray(parsed.data.to) ? parsed.data.to[0] : parsed.data.to) || "";
+  // Decode RFC 2047 encoded-words inline (legacy workers may pass raw headers)
+  const fromAddr = decodeMimeHeader(parsed.data.from);
+  const subject = decodeMimeHeader(parsed.data.subject) || "(no subject)";
   const domainName = extractDomain(firstTo);
   let domainId: string | null = null;
   if (domainName) {
@@ -98,9 +102,9 @@ export async function POST(req: Request) {
       direction: "inbound",
       status: "received",
       isRead: false,
-      fromAddr: parsed.data.from,
+      fromAddr,
       toAddr,
-      subject: parsed.data.subject || "(no subject)",
+      subject,
       textBody,
       htmlBody,
       headersJson: parsed.data.headers ? JSON.stringify(parsed.data.headers) : null,

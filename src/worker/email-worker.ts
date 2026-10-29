@@ -277,15 +277,54 @@ function stripHtml(html: string): string {
     .trim();
 }
 
+/** Decode RFC 2047 encoded-words (=?utf-8?B?...?=) in subject/names */
+function decodeMimeHeader(input?: string | null): string {
+  if (!input || !/=\?[^?]+\?[bBqQ]\?/.test(input)) return input || "";
+  const s = input.replace(/\?=\s+=\?/g, "?==?");
+  return s.replace(
+    /=\?([^?]+)\?([bBqQ])\?([^?]*)\?=/g,
+    (_m, charset: string, enc: string, payload: string) => {
+      try {
+        const label = charset.toLowerCase();
+        if (enc.toLowerCase() === "b") {
+          const bin = atob(payload.replace(/[^A-Za-z0-9+/=]/g, ""));
+          const bytes = new Uint8Array(bin.length);
+          for (let i = 0; i < bin.length; i++) bytes[i] = bin.charCodeAt(i) & 0xff;
+          return new TextDecoder(label, { fatal: false }).decode(bytes);
+        }
+        // Q-encoding: _ = space, =XX = hex byte
+        const bytes: number[] = [];
+        for (let i = 0; i < payload.length; i++) {
+          const c = payload[i];
+          if (c === "=" && i + 2 < payload.length && /^[0-9A-Fa-f]{2}$/.test(payload.slice(i + 1, i + 3))) {
+            bytes.push(parseInt(payload.slice(i + 1, i + 3), 16));
+            i += 2;
+          } else if (c === "_") {
+            bytes.push(0x20);
+          } else {
+            bytes.push(c.charCodeAt(0) & 0xff);
+          }
+        }
+        return new TextDecoder(label, { fatal: false }).decode(Uint8Array.from(bytes));
+      } catch {
+        return _m;
+      }
+    }
+  );
+}
+
 const worker = {
   async email(message: ForwardableEmailMessage, env: Env): Promise<void> {
     const maxRaw = 3 * 1024 * 1024; // 3MB raw cap
     const rawBytes = await streamToArrayBuffer(message.raw, maxRaw);
     const raw = new TextDecoder().decode(rawBytes);
 
-    const subject = message.headers.get("subject") || extractHeader(raw, "Subject") || "(no subject)";
-    const from = message.from || extractHeader(raw, "From") || "";
-    const to = message.to || extractHeader(raw, "To") || "";
+    const subject =
+      decodeMimeHeader(message.headers.get("subject")) ||
+      decodeMimeHeader(extractHeader(raw, "Subject")) ||
+      "(no subject)";
+    const from = decodeMimeHeader(message.from) || extractHeader(raw, "From") || "";
+    const to = decodeMimeHeader(message.to) || extractHeader(raw, "To") || "";
 
     const parsed = parseMime(raw);
     let text = parsed.text;
