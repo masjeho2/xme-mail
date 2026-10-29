@@ -10,6 +10,7 @@ import {
   linkifySegments,
   previewText,
 } from "@/lib/email-body";
+import { hasRenderableHtml } from "@/lib/email-html";
 import {
   ensureNotificationPermission,
   getDesktopNotifEnabled,
@@ -46,6 +47,8 @@ type Message = {
   subject: string;
   textBody?: string | null;
   htmlBody?: string | null;
+  bodyPreview?: string;
+  hasHtml?: boolean;
   attachmentsJson?: string | null;
   createdAt: string;
 };
@@ -114,6 +117,7 @@ function InboxPageInner() {
   const [notifPerm, setNotifPerm] = useState<NotificationPermission | "unsupported">("default");
   const [pushActive, setPushActive] = useState(false);
   const [alertInfo, setAlertInfo] = useState("");
+  const [bodyTab, setBodyTab] = useState<"html" | "text">("html");
 
   const knownIdsRef = useRef<Set<string> | null>(null);
   const selectedIdRef = useRef<string | null>(null);
@@ -226,6 +230,7 @@ function InboxPageInner() {
       setError("");
     }
     try {
+      // Light payload: server strips heavy bodies but provides bodyPreview
       const res = await fetch("/api/messages?direction=inbound&limit=100", {
         cache: "no-store",
       });
@@ -439,7 +444,7 @@ function InboxPageInner() {
     const q = query.trim().toLowerCase();
     if (!q) return list;
     return list.filter((m) => {
-      const body = cleanEmailBody(m.textBody, m.htmlBody).toLowerCase();
+      const body = (m.bodyPreview ?? cleanEmailBody(m.textBody, m.htmlBody)).toLowerCase();
       return (
         m.subject.toLowerCase().includes(q) ||
         m.fromAddr.toLowerCase().includes(q) ||
@@ -449,12 +454,35 @@ function InboxPageInner() {
     });
   }, [messages, query, filter]);
 
+  // One-line previews: prefer server-provided preview, else compute once per list
+  const previews = useMemo(() => {
+    const map = new Map<string, string>();
+    for (const m of filtered) {
+      map.set(
+        m.id,
+        m.bodyPreview ?? previewText(cleanEmailBody(m.textBody, m.htmlBody), 90)
+      );
+    }
+    return map;
+  }, [filtered]);
+
   const selectedBody = selected ? cleanEmailBody(selected.textBody, selected.htmlBody) : "";
   const selectedBodyParts = useMemo(() => linkifySegments(selectedBody), [selectedBody]);
   const selectedAttachments = useMemo(
     () => (selected ? parseAttachments(selected.attachmentsJson) : []),
     [selected]
   );
+  // Real HTML view available when message has an htmlBody that sanitizes cleanly
+  const selectedHtml = selected?.htmlBody;
+  const hasHtmlView = useMemo(
+    () => (selectedHtml ? hasRenderableHtml(selectedHtml) : false),
+    [selectedHtml]
+  );
+
+  // Default to HTML view when the message has one; fall back to text
+  useEffect(() => {
+    setBodyTab(hasHtmlView ? "html" : "text");
+  }, [hasHtmlView]);
 
   async function onReply(e: FormEvent) {
     e.preventDefault();
@@ -630,7 +658,7 @@ function InboxPageInner() {
               </div>
             ) : (
               filtered.map((m) => {
-                const preview = previewText(cleanEmailBody(m.textBody, m.htmlBody), 90);
+                const preview = previews.get(m.id) || "";
                 const active = selected?.id === m.id;
                 const unread = !m.isRead;
                 return (
@@ -797,23 +825,57 @@ function InboxPageInner() {
                 </div>
               ) : null}
 
-              <div className="mail-body">
-                {selectedBodyParts.map((part, i) =>
-                  part.type === "link" ? (
-                    <a
-                      key={`${i}-${part.value.slice(0, 24)}`}
-                      href={part.value}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      className="mail-link"
-                    >
-                      {part.value}
-                    </a>
-                  ) : (
-                    <span key={i}>{part.value}</span>
-                  )
-                )}
-              </div>
+              {hasHtmlView && selectedBody ? (
+                <div className="view-toggle" role="tablist">
+                  <button
+                    type="button"
+                    role="tab"
+                    aria-selected={bodyTab === "html"}
+                    className={bodyTab === "html" ? "active" : ""}
+                    onClick={() => setBodyTab("html")}
+                  >
+                    Tampilan email
+                  </button>
+                  <button
+                    type="button"
+                    role="tab"
+                    aria-selected={bodyTab === "text"}
+                    className={bodyTab === "text" ? "active" : ""}
+                    onClick={() => setBodyTab("text")}
+                  >
+                    Teks sederhana
+                  </button>
+                </div>
+              ) : null}
+
+              {bodyTab === "html" && hasHtmlView ? (
+                <div className="mail-html-frame-wrap">
+                  <iframe
+                    src={`/api/messages/${selected.id}/html`}
+                    title="Email HTML"
+                    sandbox="allow-popups allow-popups-to-escape-sandbox"
+                    className="mail-html-frame"
+                  />
+                </div>
+              ) : (
+                <div className="mail-body">
+                  {selectedBodyParts.map((part, i) =>
+                    part.type === "link" ? (
+                      <a
+                        key={`${i}-${part.value.slice(0, 24)}`}
+                        href={part.value}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="mail-link"
+                      >
+                        {part.value}
+                      </a>
+                    ) : (
+                      <span key={i}>{part.value}</span>
+                    )
+                  )}
+                </div>
+              )}
 
               {replyOpen ? (
                 <form onSubmit={onReply} className="reply-box space-y-3">

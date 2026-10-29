@@ -1,6 +1,7 @@
 import { z } from "zod";
 import { requireSession, unauthorized } from "@/lib/auth";
 import { prisma } from "@/lib/db";
+import { cleanEmailBody, previewText } from "@/lib/email-body";
 import { badRequest, json } from "@/lib/utils";
 
 export async function GET(req: Request) {
@@ -11,6 +12,9 @@ export async function GET(req: Request) {
   const direction = searchParams.get("direction") || undefined;
   const take = Math.min(Number(searchParams.get("limit") || 50), 200);
   const cursor = searchParams.get("cursor") || undefined;
+  // Keep list payloads small: omit heavy bodies unless explicitly requested.
+  // The reader fetches full bodies via /api/messages/[id].
+  const withBodies = searchParams.get("withBodies") === "1";
 
   const messages = await prisma.message.findMany({
     where: direction ? { direction } : undefined,
@@ -25,7 +29,14 @@ export async function GET(req: Request) {
     include: { domain: { select: { name: true } } },
   });
 
-  return json({ messages });
+  if (withBodies) return json({ messages });
+
+  const light = messages.map(({ textBody, htmlBody, ...rest }) => ({
+    ...rest,
+    bodyPreview: previewText(cleanEmailBody(textBody, htmlBody), 140),
+    hasHtml: Boolean(htmlBody),
+  }));
+  return json({ messages: light });
 }
 
 const deleteSchema = z.object({

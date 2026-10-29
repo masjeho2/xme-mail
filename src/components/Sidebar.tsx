@@ -93,7 +93,7 @@ export function Sidebar({
       <div className="mt-4 pt-3 border-t border-[var(--border-soft)] space-y-2">
         <a
           className="nav-link"
-          href="https://mail.x-me.cloud"
+          href={typeof window !== "undefined" ? window.location.origin : "/"}
           target="_blank"
           rel="noreferrer"
         >

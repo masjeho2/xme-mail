@@ -834,13 +834,78 @@ textarea.field {
 }
 
 /* Scrollbar */
-.mail-list-scroll::-webkit-scrollbar {
+.mail-list-scroll::-webkit-scrollbar,
+.mail-reader ::-webkit-scrollbar {
   width: 8px;
 }
-.mail-list-scroll::-webkit-scrollbar-thumb {
+.mail-list-scroll::-webkit-scrollbar-thumb,
+.mail-reader ::-webkit-scrollbar-thumb {
   background: #243247;
   border-radius: 99px;
 }
-.mail-list-scroll::-webkit-scrollbar-track {
+.mail-list-scroll::-webkit-scrollbar-track,
+.mail-reader ::-webkit-scrollbar-track {
   background: transparent;
+}
+
+body::-webkit-scrollbar {
+  width: 10px;
+}
+body::-webkit-scrollbar-thumb {
+  background: #1d2a40;
+  border-radius: 99px;
+}
+body::-webkit-scrollbar-thumb:hover {
+  background: #2a3b58;
+}
+body::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+/* View toggle tabs in reader */
+.view-toggle {
+  position: relative;
+  display: inline-flex;
+  padding: 3px;
+  gap: 2px;
+  border-radius: 12px;
+  border: 1px solid var(--border-soft);
+  background: rgba(0, 0, 0, 0.25);
+}
+
+.view-toggle button {
+  border: 0;
+  background: transparent;
+  color: var(--muted);
+  font-size: 0.82rem;
+  font-weight: 650;
+  padding: 0.4rem 0.9rem;
+  border-radius: 9px;
+  cursor: pointer;
+  transition: 0.15s ease;
+  white-space: nowrap;
+}
+
+.view-toggle button:hover {
+  color: var(--text);
+}
+
+.view-toggle button.active {
+  background: linear-gradient(180deg, #6aa8ff 0%, #3b82f6 100%);
+  color: white;
+  box-shadow: 0 4px 14px rgba(59, 130, 246, 0.3);
+}
+
+/* Smooth appearance for selected mail content */
+.mail-reader > div {
+  animation: fadeIn 0.18s ease;
+}
+
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
 }

@@ -1,5 +1,5 @@
 import DOMPurify from "isomorphic-dompurify";
-import { decodeQuotedPrintable } from "@/lib/email-body";
+import { decodeQuotedPrintable, looksLikeQuotedPrintable } from "@/lib/email-body";
 
 /** Extract HTML document from messy MIME fragment */
 export function extractHtmlDocument(rawHtml?: string | null): string | null {
@@ -7,20 +7,28 @@ export function extractHtmlDocument(rawHtml?: string | null): string | null {
   let s = rawHtml.replace(/^﻿/, "").trim();
   if (!s) return null;
 
-  // Prefer real HTML document
+  // Drop leading MIME part headers (Content-Type/Content-Transfer-Encoding blocks)
+  s = s
+    .replace(/^Content-Type:\s*text\/html[^\r\n]*\r?\n?/i, "")
+    .replace(/^Content-Transfer-Encoding:\s*[^\r\n]+\r?\n?/i, "")
+    .replace(/^;?\s*charset="?[\w-]+"?\s*/i, "")
+    .trim();
+  if (!s) return null;
+
+  // Prefer real HTML document (may sit behind MIME junk)
   const docIdx = s.search(/<!DOCTYPE\s+html|<html\b/i);
   if (docIdx >= 0) s = s.slice(docIdx);
 
-  // Decode quoted-printable if present
-  if (/content-transfer-encoding:\s*quoted-printable/i.test(rawHtml) || /=\r?\n|[A-F0-9]{2}/i.test(s)) {
-    // only decode if it looks QP-ish
-    if (/=3D|=20|=0A|=\r?\n/i.test(s) || /lang=3D|style=3D/i.test(s)) {
-      s = decodeQuotedPrintable(s);
-    }
+  // Only decode quoted-printable when content actually still looks QP-encoded.
+  // (Old regex `/[A-F0-9]{2}/i` matched plain words like "be"/"cf" and
+  // corrupted clean HTML.)
+  if (looksLikeQuotedPrintable(s)) {
+    s = decodeQuotedPrintable(s, true);
   }
 
   // Drop trailing multipart boundary
-  s = s.replace(/\r?\n----[^\r\n]*--\s*$/i, "").trim();
+  s = s.replace(/\r?\n--?[^\r\n]{0,200}--\s*$/i, "").trim();
+  if (!s) return null;
 
   // If still no tags, not useful as HTML
   if (!/<\/?[a-z][\s\S]*>/i.test(s)) return null;
@@ -32,6 +40,7 @@ export function extractHtmlDocument(rawHtml?: string | null): string | null {
 
   return s;
 }
+
 
 const ALLOWED_TAGS = [
   "a",

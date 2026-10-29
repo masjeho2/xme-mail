@@ -86,7 +86,9 @@ function parseContentType(headerValue: string): { type: string; name?: string; b
     const m = p.match(/^([^=]+)=(.*)$/);
     if (!m) continue;
     const k = m[1].trim().toLowerCase();
-    const v = m[2].trim().replace(/^"(.*)"$/, "$1");
+    let v = m[2].trim();
+    // strip optional RFC 5322 quoting around parameter values
+    v = v.replace(/^"([\s\S]*)"$/, "$1");
     if (k === "name" || k === "filename") name = v;
     if (k === "boundary") boundary = v;
   }
