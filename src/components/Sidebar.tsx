@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useEffect, useState } from "react";
+import { initTheme, toggleTheme, type Theme } from "@/lib/theme";
 
 const links = [
   { href: "/dashboard", label: "Dashboard", icon: "◈" },
@@ -25,6 +26,15 @@ export function Sidebar({
 }) {
   const pathname = usePathname();
   const [unread, setUnread] = useState(0);
+  const [theme, setThemeState] = useState<Theme>("dark");
+
+  useEffect(() => {
+    setThemeState(initTheme());
+  }, []);
+
+  function onToggleTheme() {
+    setThemeState(toggleTheme());
+  }
 
   useEffect(() => {
     let alive = true;
@@ -91,6 +101,10 @@ export function Sidebar({
       </nav>
 
       <div className="mt-4 pt-3 border-t border-[var(--border-soft)] space-y-2">
+        <button type="button" className="theme-toggle" onClick={onToggleTheme} title="Ganti tema gelap/terang">
+          <span>{theme === "dark" ? "🌙" : "☀️"}</span>
+          <span>{theme === "dark" ? "Mode gelap" : "Mode terang"}</span>
+        </button>
         <a
           className="nav-link"
           href={typeof window !== "undefined" ? window.location.origin : "/"}

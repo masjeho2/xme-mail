@@ -2,22 +2,78 @@
 @tailwind components;
 @tailwind utilities;
 
-:root {
-  --bg: #060a11;
-  --panel: #0c1320;
-  --panel-2: #101a2b;
-  --panel-hover: #152036;
-  --border: #1c2a40;
-  --border-soft: rgba(148, 163, 184, 0.12);
-  --text: #e8eefc;
-  --muted: #8b9bb4;
+/* ============================================================
+   Theme tokens — dark (default) & light
+   ============================================================ */
+
+:root,
+html[data-theme="dark"] {
+  --bg: #080c14;
+  --panel: #0d1422;
+  --panel-2: #111a2c;
+  --panel-3: #16213a;
+  --border: #1b2942;
+  --border-soft: rgba(148, 163, 184, 0.14);
+  --text: #e9eefb;
+  --text-strong: #f4f7ff;
+  --muted: #8b98b0;
   --accent: #5b9dff;
-  --accent-soft: rgba(59, 130, 246, 0.14);
+  --accent-strong: #3b82f6;
+  --accent-soft: rgba(59, 130, 246, 0.13);
   --success: #34d399;
   --danger: #f87171;
   --warn: #fbbf24;
-  --shadow: 0 18px 50px rgba(0, 0, 0, 0.35);
+  --shadow: 0 18px 50px rgba(2, 6, 14, 0.5);
   --radius: 16px;
+  --glow-a: rgba(56, 130, 246, 0.16);
+  --glow-b: rgba(14, 165, 164, 0.10);
+  --frame-bg: #ffffff;
+  --hover-wash: rgba(255, 255, 255, 0.04);
+  --field-bg: #0a111d;
+  --scroll-thumb: #22314e;
+  --badge-blue-text: #93c5fd;
+  --badge-green-text: #86efac;
+  --badge-red-text: #fecaca;
+  --badge-yellow-text: #fde68a;
+  --link: #93c5fd;
+  --link-hover: #c0d9ff;
+  --mail-body-text: #dce6f8;
+  --mail-from: #b6c5dd;
+  --input-caret: #3b82f6;
+}
+
+html[data-theme="light"] {
+  --bg: #eef1f7;
+  --panel: #ffffff;
+  --panel-2: #f6f8fc;
+  --panel-3: #eef2f9;
+  --border: #d8dfee;
+  --border-soft: rgba(15, 23, 42, 0.08);
+  --text: #1c2434;
+  --text-strong: #0b1220;
+  --muted: #5b6880;
+  --accent: #2563eb;
+  --accent-strong: #1d4ed8;
+  --accent-soft: rgba(37, 99, 235, 0.09);
+  --success: #059669;
+  --danger: #dc2626;
+  --warn: #b45309;
+  --shadow: 0 12px 40px rgba(15, 23, 42, 0.10);
+  --glow-a: rgba(37, 99, 235, 0.07);
+  --glow-b: rgba(13, 148, 136, 0.05);
+  --frame-bg: #ffffff;
+  --hover-wash: rgba(15, 23, 42, 0.04);
+  --field-bg: #ffffff;
+  --scroll-thumb: #c3cddd;
+  --badge-blue-text: #1d4ed8;
+  --badge-green-text: #047857;
+  --badge-red-text: #b91c1c;
+  --badge-yellow-text: #92400e;
+  --link: #1d4ed8;
+  --link-hover: #1e3a8a;
+  --mail-body-text: #1c2434;
+  --mail-from: #3f4a60;
+  --input-caret: #2563eb;
 }
 
 * {
@@ -29,12 +85,14 @@ body {
   margin: 0;
   min-height: 100%;
   background:
-    radial-gradient(1100px 520px at 8% -8%, rgba(37, 99, 235, 0.18), transparent 55%),
-    radial-gradient(900px 480px at 100% 0%, rgba(14, 116, 144, 0.12), transparent 50%),
+    radial-gradient(1100px 520px at 8% -8%, var(--glow-a), transparent 55%),
+    radial-gradient(900px 480px at 100% 0%, var(--glow-b), transparent 50%),
     var(--bg);
+  background-attachment: fixed;
   color: var(--text);
   font-family: ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
   -webkit-font-smoothing: antialiased;
+  transition: background-color 0.25s ease, color 0.25s ease;
 }
 
 a {
@@ -52,6 +110,10 @@ button {
 ::selection {
   background: rgba(59, 130, 246, 0.35);
 }
+
+/* ============================================================
+   Layout
+   ============================================================ */
 
 .shell {
   min-height: 100vh;
@@ -80,23 +142,24 @@ button {
 }
 
 .card {
-  background: linear-gradient(180deg, rgba(16, 24, 40, 0.96) 0%, rgba(12, 19, 32, 0.98) 100%);
+  background: var(--panel);
+  background-image: linear-gradient(180deg, color-mix(in srgb, var(--panel-2) 60%, transparent) 0%, var(--panel) 100%);
   border: 1px solid var(--border);
   border-radius: var(--radius);
   box-shadow: var(--shadow);
-  backdrop-filter: blur(8px);
 }
 
 .card-soft {
-  background: rgba(12, 19, 32, 0.72);
+  background: var(--panel-2);
   border: 1px solid var(--border-soft);
   border-radius: 14px;
 }
 
 .page-title {
   font-size: 1.5rem;
-  font-weight: 650;
+  font-weight: 700;
   letter-spacing: -0.02em;
+  color: var(--text-strong);
 }
 
 .page-sub {
@@ -104,6 +167,10 @@ button {
   font-size: 0.9rem;
   margin-top: 0.25rem;
 }
+
+/* ============================================================
+   Buttons
+   ============================================================ */
 
 .btn {
   display: inline-flex;
@@ -116,8 +183,12 @@ button {
   font-weight: 600;
   font-size: 0.92rem;
   cursor: pointer;
-  transition: 0.15s ease;
+  transition: all 0.16s cubic-bezier(0.25, 0.8, 0.35, 1);
   white-space: nowrap;
+}
+
+.btn:active:not(:disabled) {
+  transform: scale(0.98);
 }
 
 .btn:disabled {
@@ -128,12 +199,13 @@ button {
 .btn-primary {
   background: linear-gradient(180deg, #6aa8ff 0%, #3b82f6 100%);
   color: white;
-  box-shadow: 0 8px 20px rgba(59, 130, 246, 0.25);
+  box-shadow: 0 8px 20px rgba(59, 130, 246, 0.28);
 }
 
 .btn-primary:hover:not(:disabled) {
-  filter: brightness(1.06);
+  filter: brightness(1.08);
   transform: translateY(-1px);
+  box-shadow: 0 10px 26px rgba(59, 130, 246, 0.36);
 }
 
 .btn-ghost {
@@ -143,18 +215,18 @@ button {
 }
 
 .btn-ghost:hover:not(:disabled) {
-  background: rgba(255, 255, 255, 0.04);
-  border-color: #2b3d59;
+  background: var(--hover-wash);
+  border-color: var(--accent);
 }
 
 .btn-danger {
-  background: rgba(248, 113, 113, 0.1);
-  border-color: rgba(248, 113, 113, 0.28);
-  color: #fecaca;
+  background: color-mix(in srgb, var(--danger) 10%, transparent);
+  border-color: color-mix(in srgb, var(--danger) 30%, transparent);
+  color: var(--danger);
 }
 
 .btn-danger:hover:not(:disabled) {
-  background: rgba(248, 113, 113, 0.16);
+  background: color-mix(in srgb, var(--danger) 18%, transparent);
 }
 
 .btn-sm {
@@ -163,24 +235,33 @@ button {
   border-radius: 9px;
 }
 
+/* ============================================================
+   Fields
+   ============================================================ */
+
 .field {
   width: 100%;
-  background: #0a101a;
+  background: var(--field-bg);
   border: 1px solid var(--border);
   border-radius: 11px;
   color: var(--text);
+  caret-color: var(--input-caret);
   padding: 0.7rem 0.85rem;
   outline: none;
-  transition: 0.15s ease;
+  transition: border-color 0.15s ease, box-shadow 0.15s ease;
+}
+
+.field::placeholder {
+  color: color-mix(in srgb, var(--muted) 80%, transparent);
 }
 
 .field:hover {
-  border-color: #2a3d5c;
+  border-color: color-mix(in srgb, var(--accent) 45%, var(--border));
 }
 
 .field:focus {
-  border-color: #3b82f6;
-  box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.16);
+  border-color: var(--accent-strong);
+  box-shadow: 0 0 0 3px color-mix(in srgb, var(--accent) 20%, transparent);
 }
 
 textarea.field {
@@ -198,6 +279,10 @@ textarea.field {
   letter-spacing: 0.02em;
 }
 
+/* ============================================================
+   Badges
+   ============================================================ */
+
 .badge {
   display: inline-flex;
   align-items: center;
@@ -211,28 +296,32 @@ textarea.field {
 }
 
 .badge-green {
-  color: #86efac;
-  border-color: rgba(34, 197, 94, 0.3);
-  background: rgba(34, 197, 94, 0.1);
+  color: var(--badge-green-text);
+  border-color: color-mix(in srgb, var(--success) 32%, transparent);
+  background: color-mix(in srgb, var(--success) 10%, transparent);
 }
 
 .badge-blue {
-  color: #93c5fd;
-  border-color: rgba(59, 130, 246, 0.3);
-  background: rgba(59, 130, 246, 0.1);
+  color: var(--badge-blue-text);
+  border-color: color-mix(in srgb, var(--accent-strong) 32%, transparent);
+  background: color-mix(in srgb, var(--accent-strong) 10%, transparent);
 }
 
 .badge-red {
-  color: #fecaca;
-  border-color: rgba(248, 113, 113, 0.3);
-  background: rgba(248, 113, 113, 0.1);
+  color: var(--badge-red-text);
+  border-color: color-mix(in srgb, var(--danger) 32%, transparent);
+  background: color-mix(in srgb, var(--danger) 10%, transparent);
 }
 
 .badge-yellow {
-  color: #fde68a;
-  border-color: rgba(251, 191, 36, 0.3);
-  background: rgba(251, 191, 36, 0.1);
+  color: var(--badge-yellow-text);
+  border-color: color-mix(in srgb, var(--warn) 32%, transparent);
+  background: color-mix(in srgb, var(--warn) 10%, transparent);
 }
+
+/* ============================================================
+   Tables
+   ============================================================ */
 
 .table {
   width: 100%;
@@ -260,7 +349,7 @@ textarea.field {
 }
 
 .table tbody tr:hover {
-  background: rgba(255, 255, 255, 0.02);
+  background: var(--hover-wash);
 }
 
 .muted {
@@ -271,7 +360,10 @@ textarea.field {
   font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
 }
 
-/* Mobile topbar + drawer */
+/* ============================================================
+   Mobile topbar + drawer
+   ============================================================ */
+
 .mobile-topbar {
   display: flex;
   align-items: center;
@@ -296,9 +388,10 @@ textarea.field {
   position: fixed;
   inset: 0;
   border: 0;
-  background: rgba(2, 6, 14, 0.62);
-  backdrop-filter: blur(2px);
+  background: rgba(2, 6, 14, 0.55);
+  backdrop-filter: blur(3px);
   z-index: 40;
+  animation: fadeIn 0.15s ease;
 }
 
 .sidebar-close {
@@ -319,7 +412,10 @@ textarea.field {
   }
 }
 
-/* Sidebar */
+/* ============================================================
+   Sidebar
+   ============================================================ */
+
 .sidebar {
   position: sticky;
   top: 1rem;
@@ -395,18 +491,21 @@ textarea.field {
   margin-top: 0.25rem;
 }
 
-/* Unread indicators */
+/* ============================================================
+   Unread indicators
+   ============================================================ */
+
 .mail-item.unread {
-  background: rgba(59, 130, 246, 0.06);
+  background: var(--accent-soft);
 }
 
 .mail-item.unread:hover {
-  background: rgba(59, 130, 246, 0.1);
+  background: color-mix(in srgb, var(--accent-strong) 14%, transparent);
 }
 
 .mail-item.unread .mail-subject,
 .unread-text {
-  color: #f0f6ff;
+  color: var(--text-strong);
   font-weight: 700;
 }
 
@@ -415,8 +514,8 @@ textarea.field {
   width: 8px;
   height: 8px;
   border-radius: 999px;
-  background: #3b82f6;
-  box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.2);
+  background: var(--accent-strong);
+  box-shadow: 0 0 0 3px color-mix(in srgb, var(--accent-strong) 22%, transparent);
   margin-right: 0.4rem;
   vertical-align: middle;
   flex-shrink: 0;
@@ -435,9 +534,9 @@ textarea.field {
   padding: 0.15rem 0.55rem;
   font-size: 0.72rem;
   font-weight: 700;
-  background: rgba(59, 130, 246, 0.18);
-  border: 1px solid rgba(59, 130, 246, 0.35);
-  color: #bfdbfe;
+  background: color-mix(in srgb, var(--accent-strong) 16%, transparent);
+  border: 1px solid color-mix(in srgb, var(--accent-strong) 35%, transparent);
+  color: var(--badge-blue-text);
 }
 
 .nav-badge {
@@ -446,7 +545,7 @@ textarea.field {
   height: 1.25rem;
   padding: 0 0.35rem;
   border-radius: 999px;
-  background: #2563eb;
+  background: var(--accent-strong);
   color: white;
   font-size: 0.68rem;
   font-weight: 700;
@@ -464,18 +563,18 @@ textarea.field {
   color: var(--muted);
   border: 1px solid transparent;
   font-weight: 550;
-  transition: 0.15s ease;
+  transition: all 0.15s ease;
 }
 
 .nav-link:hover {
-  background: rgba(255, 255, 255, 0.03);
+  background: var(--hover-wash);
   color: var(--text);
 }
 
 .nav-link.active {
   background: var(--accent-soft);
-  border-color: rgba(59, 130, 246, 0.28);
-  color: #dbeafe;
+  border-color: color-mix(in srgb, var(--accent-strong) 28%, transparent);
+  color: var(--text-strong);
 }
 
 .nav-ico {
@@ -484,7 +583,10 @@ textarea.field {
   opacity: 0.9;
 }
 
-/* Stats */
+/* ============================================================
+   Stats
+   ============================================================ */
+
 .stat-card {
   position: relative;
   overflow: hidden;
@@ -498,7 +600,7 @@ textarea.field {
   width: 90px;
   height: 90px;
   border-radius: 999px;
-  background: rgba(59, 130, 246, 0.08);
+  background: color-mix(in srgb, var(--accent-strong) 8%, transparent);
 }
 
 .stat-value {
@@ -506,9 +608,13 @@ textarea.field {
   font-weight: 700;
   letter-spacing: -0.03em;
   margin-top: 0.35rem;
+  color: var(--text-strong);
 }
 
-/* Inbox mail client */
+/* ============================================================
+   Inbox
+   ============================================================ */
+
 .inbox-shell {
   display: grid;
   gap: 0.9rem;
@@ -541,16 +647,16 @@ textarea.field {
   padding: 0.9rem 1rem;
   border-bottom: 1px solid var(--border-soft);
   cursor: pointer;
-  transition: 0.12s ease;
+  transition: background 0.12s ease;
 }
 
 .mail-item:hover {
-  background: rgba(255, 255, 255, 0.03);
+  background: var(--hover-wash);
 }
 
 .mail-item.active {
   background: var(--accent-soft);
-  border-left: 2px solid #3b82f6;
+  border-left: 2px solid var(--accent-strong);
 }
 
 .avatar {
@@ -570,6 +676,7 @@ textarea.field {
   font-weight: 650;
   font-size: 0.92rem;
   line-height: 1.3;
+  color: var(--text-strong);
 }
 
 .mail-preview {
@@ -591,7 +698,7 @@ textarea.field {
 
 .mail-from {
   font-size: 0.78rem;
-  color: #b6c5dd;
+  color: var(--mail-from);
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
@@ -614,29 +721,32 @@ textarea.field {
   word-break: break-word;
   line-height: 1.65;
   font-size: 0.95rem;
-  color: #dce6f8;
-  background: rgba(0, 0, 0, 0.18);
+  color: var(--mail-body-text);
+  background: color-mix(in srgb, var(--panel-3, #16213a) 55%, transparent);
+  background: var(--panel-2);
   border: 1px solid var(--border-soft);
   border-radius: 12px;
   padding: 1rem 1.1rem;
 }
 
 .mail-link {
-  color: #93c5fd;
+  color: var(--link);
   text-decoration: underline;
+  text-decoration-color: color-mix(in srgb, var(--link) 45%, transparent);
   text-underline-offset: 2px;
   word-break: break-all;
+  transition: color 0.12s ease;
 }
 
 .mail-link:hover {
-  color: #bfdbfe;
+  color: var(--link-hover);
 }
 
 .mail-html-frame-wrap {
   border: 1px solid var(--border-soft);
   border-radius: 12px;
   overflow: hidden;
-  background: #fff;
+  background: var(--frame-bg);
   min-height: 320px;
 }
 
@@ -645,15 +755,19 @@ textarea.field {
   min-height: 420px;
   height: min(70vh, 720px);
   border: 0;
-  background: #fff;
+  background: var(--frame-bg);
   display: block;
 }
+
+/* ============================================================
+   Attachments
+   ============================================================ */
 
 .attach-list {
   border: 1px solid var(--border-soft);
   border-radius: 12px;
   padding: 0.75rem 0.9rem;
-  background: rgba(0, 0, 0, 0.14);
+  background: var(--panel-2);
 }
 
 .attach-chip {
@@ -664,15 +778,15 @@ textarea.field {
   padding: 0.45rem 0.65rem;
   border-radius: 10px;
   border: 1px solid var(--border);
-  background: rgba(255, 255, 255, 0.03);
+  background: var(--panel-2);
   color: var(--text);
   text-decoration: none;
-  transition: 0.12s ease;
+  transition: border-color 0.12s ease, background 0.12s ease;
 }
 
 .attach-chip:hover {
-  border-color: rgba(59, 130, 246, 0.45);
-  background: rgba(59, 130, 246, 0.08);
+  border-color: color-mix(in srgb, var(--accent-strong) 45%, transparent);
+  background: var(--accent-soft);
 }
 
 .attach-thumb {
@@ -680,7 +794,7 @@ textarea.field {
   height: 36px;
   object-fit: cover;
   border-radius: 8px;
-  background: #0b1220;
+  background: var(--panel-3);
 }
 
 .attach-preview-card {
@@ -688,13 +802,14 @@ textarea.field {
   border: 1px solid var(--border);
   border-radius: 12px;
   overflow: hidden;
-  background: rgba(0, 0, 0, 0.25);
+  background: var(--panel-2);
   text-decoration: none;
   color: inherit;
+  transition: border-color 0.12s ease;
 }
 
 .attach-preview-card:hover {
-  border-color: rgba(59, 130, 246, 0.45);
+  border-color: color-mix(in srgb, var(--accent-strong) 45%, transparent);
 }
 
 .attach-preview-img {
@@ -702,7 +817,7 @@ textarea.field {
   width: 100%;
   max-height: 420px;
   object-fit: contain;
-  background: #0b1220;
+  background: var(--panel-3);
 }
 
 .attach-preview-meta {
@@ -713,6 +828,10 @@ textarea.field {
   border-top: 1px solid var(--border-soft);
 }
 
+/* ============================================================
+   Toggles / misc controls
+   ============================================================ */
+
 .notify-toggle {
   display: inline-flex;
   align-items: center;
@@ -722,21 +841,22 @@ textarea.field {
   border: 1px solid var(--border);
   border-radius: 999px;
   padding: 0.28rem 0.55rem;
-  background: rgba(255, 255, 255, 0.02);
+  background: var(--panel-2);
   user-select: none;
   cursor: pointer;
+  transition: color 0.12s ease, border-color 0.12s ease, background 0.12s ease;
 }
 
 .notify-toggle input {
-  accent-color: #3b82f6;
+  accent-color: var(--accent-strong);
   width: 0.9rem;
   height: 0.9rem;
 }
 
 .notify-toggle:has(input:checked) {
-  color: #dbeafe;
-  border-color: rgba(59, 130, 246, 0.4);
-  background: rgba(59, 130, 246, 0.1);
+  color: var(--badge-blue-text);
+  border-color: color-mix(in srgb, var(--accent-strong) 40%, transparent);
+  background: var(--accent-soft);
 }
 
 .attach-icon {
@@ -745,7 +865,7 @@ textarea.field {
   display: grid;
   place-items: center;
   border-radius: 8px;
-  background: rgba(255, 255, 255, 0.04);
+  background: var(--hover-wash);
   font-size: 1rem;
 }
 
@@ -774,6 +894,10 @@ textarea.field {
   padding: 2rem;
 }
 
+/* ============================================================
+   Alerts
+   ============================================================ */
+
 .alert {
   border-radius: 12px;
   padding: 0.75rem 0.9rem;
@@ -781,22 +905,26 @@ textarea.field {
 }
 
 .alert-info {
-  color: #bfdbfe;
-  background: rgba(59, 130, 246, 0.12);
-  border: 1px solid rgba(59, 130, 246, 0.28);
+  color: var(--badge-blue-text);
+  background: color-mix(in srgb, var(--accent-strong) 10%, transparent);
+  border: 1px solid color-mix(in srgb, var(--accent-strong) 26%, transparent);
 }
 
 .alert-error {
-  color: #fecaca;
-  background: rgba(248, 113, 113, 0.1);
-  border: 1px solid rgba(248, 113, 113, 0.22);
+  color: var(--badge-red-text);
+  background: color-mix(in srgb, var(--danger) 10%, transparent);
+  border: 1px solid color-mix(in srgb, var(--danger) 24%, transparent);
 }
 
 .alert-success {
-  color: #bbf7d0;
-  background: rgba(34, 197, 94, 0.1);
-  border: 1px solid rgba(34, 197, 94, 0.22);
+  color: var(--badge-green-text);
+  background: color-mix(in srgb, var(--success) 10%, transparent);
+  border: 1px solid color-mix(in srgb, var(--success) 24%, transparent);
 }
+
+/* ============================================================
+   Login
+   ============================================================ */
 
 .login-wrap {
   min-height: 100vh;
@@ -815,14 +943,18 @@ textarea.field {
   position: absolute;
   inset: -1px;
   border-radius: 18px;
-  background: linear-gradient(135deg, rgba(59, 130, 246, 0.35), transparent 40%, rgba(34, 197, 94, 0.15));
+  background: linear-gradient(135deg, color-mix(in srgb, var(--accent-strong) 35%, transparent), transparent 40%, color-mix(in srgb, var(--success) 15%, transparent));
   z-index: -1;
   filter: blur(12px);
   opacity: 0.7;
 }
 
+/* ============================================================
+   Skeleton & animation
+   ============================================================ */
+
 .skeleton {
-  background: linear-gradient(90deg, rgba(255,255,255,0.04), rgba(255,255,255,0.08), rgba(255,255,255,0.04));
+  background: linear-gradient(90deg, var(--hover-wash), color-mix(in srgb, var(--hover-wash) 55%, var(--text)), var(--hover-wash));
   background-size: 200% 100%;
   animation: shimmer 1.2s infinite;
   border-radius: 8px;
@@ -833,14 +965,17 @@ textarea.field {
   100% { background-position: -200% 0; }
 }
 
-/* Scrollbar */
+/* ============================================================
+   Scrollbars
+   ============================================================ */
+
 .mail-list-scroll::-webkit-scrollbar,
 .mail-reader ::-webkit-scrollbar {
   width: 8px;
 }
 .mail-list-scroll::-webkit-scrollbar-thumb,
 .mail-reader ::-webkit-scrollbar-thumb {
-  background: #243247;
+  background: var(--scroll-thumb);
   border-radius: 99px;
 }
 .mail-list-scroll::-webkit-scrollbar-track,
@@ -852,17 +987,20 @@ body::-webkit-scrollbar {
   width: 10px;
 }
 body::-webkit-scrollbar-thumb {
-  background: #1d2a40;
+  background: var(--scroll-thumb);
   border-radius: 99px;
 }
 body::-webkit-scrollbar-thumb:hover {
-  background: #2a3b58;
+  background: color-mix(in srgb, var(--scroll-thumb) 60%, var(--text));
 }
 body::-webkit-scrollbar-track {
   background: transparent;
 }
 
-/* View toggle tabs in reader */
+/* ============================================================
+   View toggle tabs in reader
+   ============================================================ */
+
 .view-toggle {
   position: relative;
   display: inline-flex;
@@ -870,7 +1008,7 @@ body::-webkit-scrollbar-track {
   gap: 2px;
   border-radius: 12px;
   border: 1px solid var(--border-soft);
-  background: rgba(0, 0, 0, 0.25);
+  background: var(--panel-2);
 }
 
 .view-toggle button {
@@ -882,7 +1020,7 @@ body::-webkit-scrollbar-track {
   padding: 0.4rem 0.9rem;
   border-radius: 9px;
   cursor: pointer;
-  transition: 0.15s ease;
+  transition: all 0.15s ease;
   white-space: nowrap;
 }
 
@@ -896,6 +1034,32 @@ body::-webkit-scrollbar-track {
   box-shadow: 0 4px 14px rgba(59, 130, 246, 0.3);
 }
 
+/* ============================================================
+   Theme toggle
+   ============================================================ */
+
+.theme-toggle {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.5rem;
+  width: 100%;
+  padding: 0.65rem 0.8rem;
+  border-radius: 12px;
+  border: 1px solid var(--border);
+  background: var(--panel-2);
+  color: var(--text);
+  font-size: 0.85rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+
+.theme-toggle:hover {
+  border-color: var(--accent);
+  background: var(--hover-wash);
+}
+
 /* Smooth appearance for selected mail content */
 .mail-reader > div {
   animation: fadeIn 0.18s ease;
@@ -907,5 +1071,18 @@ body::-webkit-scrollbar-track {
   }
   to {
     opacity: 1;
+  }
+}
+
+/* ============================================================
+   Inbox header sticky on mobile scroll
+   ============================================================ */
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    transition-duration: 0.01ms !important;
   }
 }
